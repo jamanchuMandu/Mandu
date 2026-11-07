@@ -298,6 +298,7 @@ const TYPES = [
 const typeIdx = id => TYPES.findIndex(t=>t.id===id);
 const RANKS = ['문주','군만두장군','찜기호법','군만두','물만두','피만두','왕만두'];
 const PI_RANK = '피만두', MISS_LIMIT = 4;
+const COUNT_FROM = '2026-12-01';   // 피만두 판정 시작일 (11월은 유예)
 let S = null, UPDATED = '';
 
 const $ = id => document.getElementById(id);
@@ -336,7 +337,7 @@ function distribute(){
    .slice(0,left).forEach(o=>res[o.i]++);
   return res;
 }
-/* 예상등급: 최근 4주(이번 주 월요일 기준 3주 전 월요일 ~ 오늘)에 열린 던전 중 X(불참) 횟수. △는 참여로 봄 */
+/* 예상등급: 최근 4주(3주 전 월요일 ~ 오늘)에 열린 던전 중 X(불참) 횟수. △는 참여로 봄. COUNT_FROM 이전은 유예 */
 function missWindow(){
   const t = new Date(); t.setHours(0,0,0,0);
   const f = new Date(t); f.setDate(f.getDate() - ((t.getDay()+6)%7) - 21);   // 3주 전 월요일
@@ -344,7 +345,12 @@ function missWindow(){
   const to = iso(t), from = iso(f);
   // 참석자가 한 명도 없는 일정(아직 안 열렸거나 취소)은 불참 계산에서 제외
   const held = e => S.members.some(m=>S.att[m.id+'|'+e.id]);
-  return {from, to, weeks:`W${isoWeek(from)}~W${isoWeek(to)}`, evs: S.events.filter(e=>e.date>=from && e.date<=to && held(e))};
+  // 유예: COUNT_FROM 이전 던전은 판정에 넣지 않음
+  const start = from < COUNT_FROM ? COUNT_FROM : from;
+  const grace = to < COUNT_FROM;
+  const md = ds => `${+ds.slice(5,7)}/${+ds.slice(8)}`;
+  return {from:start, to, grace, range: grace ? '' : `${md(start)}~${md(to)}`,
+          evs: grace ? [] : S.events.filter(e=>e.date>=start && e.date<=to && held(e))};
 }
 function expected(m, win){
   const miss = win.evs.filter(e=>!S.att[m.id+'|'+e.id]).length;
@@ -383,7 +389,7 @@ function renderHome(){
     <div class="panel tile"><span>문파원</span><b>${S.members.length}<small>명</small></b></div>
     <div class="panel tile"><span>${lastW?`Week ${lastW} 평균 참여율`:'최근 참여율'}</span><b>${rate}<small>%</small></b></div>
     <div class="panel tile"><span>구매가능갯수</span><b>${Math.floor(+S.budget||0)}<small>개</small></b></div>
-    <div class="panel tile${pis.length?' warn':''}"><span>최근 4주 피만두 예상</span><b>${pis.length}<small>명</small></b></div>
+    <div class="panel tile${pis.length?' warn':''}"><span>최근 4주 피만두 예상</span>${win.grace?`<b>유예<small>${+COUNT_FROM.slice(5,7)}/${+COUNT_FROM.slice(8)}부터 집계</small></b>`:`<b>${pis.length}<small>명</small></b>`}</div>
   </div>`;
   h += `<div class="cols2"><div class="panel card"><h2>${lastW?`Week ${lastW} 컨텐츠별 참여`:'컨텐츠별 참여'}<small>참석 인원 / 전체 ${S.members.length}명</small></h2>`;
   if(lastEvs.length){
@@ -393,9 +399,9 @@ function renderHome(){
         <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:var(--t-${e.type}-fg)"></div></div><span class="v">${n}명 · ${p}%</span></div>`;
     }).join('') + '</div>';
   } else h += '<div class="empty">아직 등록된 일정이 없습니다.</div>';
-  h += `</div><div class="panel card"><h2>최근 4주 피만두 예상<small>${win.weeks} · 던전 불참 ${MISS_LIMIT}회 이상 · 열린 던전 ${win.evs.length}개</small></h2>`;
+  h += `</div><div class="panel card"><h2>최근 4주 피만두 예상<small>${win.grace?`유예 기간 · ${fmtDate(COUNT_FROM)}부터 집계`:`${win.range} · 던전 불참 ${MISS_LIMIT}회 이상 · 열린 던전 ${win.evs.length}개`}</small></h2>`;
   h += pis.length ? '<div class="pi-list">' + pis.map(x=>`<div class="pi-item"><span>${esc(x.m.name)} ${x.m.rank?rankChip(x.m.rank):''}</span><b>불참 ${x.miss}/${win.evs.length}</b></div>`).join('') + '</div>'
-                  : `<div class="empty">${win.evs.length<MISS_LIMIT?`최근 4주 동안 던전이 ${win.evs.length}개 열려 아직 해당자가 없습니다.`:'해당자가 없습니다. 모두 잘하고 있어요.'}</div>`;
+                  : `<div class="empty">${win.grace?`지금은 유예 기간이라 피만두 판정을 하지 않습니다. ${fmtDate(COUNT_FROM)}부터 열린 던전을 기준으로 집계합니다.`:win.evs.length<MISS_LIMIT?`집계 기간에 던전이 ${win.evs.length}개 열려 아직 해당자가 없습니다.`:'해당자가 없습니다. 모두 잘하고 있어요.'}</div>`;
   h += `</div></div>`;
   const groups = RANKS.map(r=>({r, ms:S.members.filter(m=>m.rank===r)})).filter(g=>g.ms.length);
   const none = S.members.filter(m=>!m.rank);
@@ -419,7 +425,7 @@ function renderAttendance(){
   const {weeks, lastOfWeek} = weekGroups(evs);
   const we = id => lastOfWeek.has(id)?' wk-end':'';
   let h = '<thead><tr><th class="sticky c-dist" rowspan="3">분배</th><th class="sticky c-score" rowspan="3">참석<br>점수</th><th class="sticky c-name" rowspan="3">닉네임</th>';
-  h += `<th class="sticky c-rank" rowspan="3">직위</th><th class="sticky c-exp" rowspan="3" title="${fmtDate(win.from)} ~ ${fmtDate(win.to)} 던전 불참 ${MISS_LIMIT}회 이상이면 피만두">예상등급<br><small style="font-weight:400;color:var(--muted)">최근 4주</small></th>`;
+  h += `<th class="sticky c-rank" rowspan="3">직위</th><th class="sticky c-exp" rowspan="3" title="${win.grace?`유예 기간 · ${fmtDate(COUNT_FROM)}부터 집계`:`${fmtDate(win.from)} ~ ${fmtDate(win.to)} 던전 불참 ${MISS_LIMIT}회 이상이면 피만두`}">예상등급<br><small style="font-weight:400;color:var(--muted)">${win.grace?`${+COUNT_FROM.slice(5,7)}/${+COUNT_FROM.slice(8)}부터`:'최근 4주'}</small></th>`;
   weeks.forEach(w=> h += `<th class="week" colspan="${w.n}">Week ${w.w}</th>`);
   h += '</tr><tr>' + evs.map(e=>`<th class="ev ty-${e.type}${we(e.id)}">${TYPES[typeIdx(e.type)].name}</th>`).join('');
   h += '</tr><tr>' + evs.map(e=>`<th class="${we(e.id)}">${fmtDate(e.date)}</th>`).join('') + '</tr></thead><tbody>';
@@ -428,7 +434,7 @@ function renderAttendance(){
     h += `<tr><td class="sticky c-dist">${distMap[m.id]}</td><td class="sticky c-score">${s}</td>`;
     h += `<td class="sticky c-name"><div class="nm"><span>${esc(m.name)}</span></div></td>`;
     h += `<td class="sticky c-rank">${rankChip(rk)}</td>`;
-    h += `<td class="sticky c-exp">${ex.pi?`<span class="gr warn">${PI_RANK}</span>`:`<span class="gr keep">${esc(rk||'유지')}</span>`}<small>불참 ${ex.miss}/${win.evs.length}</small></td>`;
+    h += `<td class="sticky c-exp">${ex.pi?`<span class="gr warn">${PI_RANK}</span>`:`<span class="gr keep">${esc(rk||'유지')}</span>`}<small>${win.grace?'유예 기간':`불참 ${ex.miss}/${win.evs.length}`}</small></td>`;
     evs.forEach(e=>{ const v=S.att[m.id+'|'+e.id]; h += `<td class="cell${v===1?' on':v===2?' tri':''}${we(e.id)}"><span class="dot"></span></td>`; });
     h += '</tr>';
   });
