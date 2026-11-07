@@ -273,6 +273,18 @@ table.mt select{padding:4px 8px;width:100%}
   .fab a .ic-wrap img{width:44px;height:44px}
   footer{padding-bottom:30px}
 }
+/* 문파상점 */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.shop-item{padding:12px 14px;display:flex;gap:12px;align-items:center;min-width:0}
+.shop-item .si{width:56px;height:56px;border-radius:10px;flex:none;object-fit:cover}
+.shop-item .sb{display:flex;flex-direction:column;gap:3px;min-width:0}
+.shop-item .nm{font-weight:700;font-size:14px;overflow-wrap:anywhere;line-height:1.35}
+.shop-item .pr{font-size:18px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.shop-item .nt{font-size:12px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.shop-item .lm{font-size:12px;color:var(--t-si-fg);font-weight:600}
+.shop-item .lk{font-size:13px;font-weight:700;color:var(--warn)}
+.shop-item.locked{opacity:.6}
+@media (max-width:420px){.tabs a{padding:8px 9px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:700px){
   nav.top .in{flex-wrap:wrap;height:auto;padding-block:8px;row-gap:6px}
@@ -308,6 +320,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
     <a href="#home" data-v="home">홈</a>
     <a href="#attendance" data-v="attendance">출석부</a>
     <a href="#distribution" data-v="distribution">분배표</a>
+    <a href="#shop" data-v="shop">문파상점</a>
   </div>
   <div class="tools"><button id="btnTheme" title="테마 전환" aria-label="테마 전환">◐</button></div>
 </div></nav>
@@ -331,6 +344,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
     <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · 예상등급: 최근 4주 던전 불참 4회 이상이면 피만두</p>
   </section>
   <section class="view" id="v-distribution" hidden></section>
+  <section class="view" id="v-shop" hidden></section>
 </main>
 <footer class="in">보기 전용 페이지입니다 · 출석 기록은 문주가 관리합니다</footer>
 <nav class="fab" id="fab" aria-label="문파 채널"></nav>
@@ -537,14 +551,31 @@ function renderDist(){
   $('dSearch').addEventListener('input', ()=>{ renderDist(); const n=$('dSearch'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); });
 }
 
+/* ---------- 문파상점 ---------- */
+function renderShop(){
+  const items = (S.shop||[]).filter(it=>it && it.name);
+  let h = `<div class="panel toolbar"><div class="stat budget"><span>이번 구매가능갯수</span><b>${Math.floor(+S.budget||0)}</b></div>
+    <div class="stat"><span>품목</span><b>${items.length}</b></div>
+    <div class="tb-right"><span class="hint">문주가 등록한 문파상점 품목과 가격입니다</span></div></div>`;
+  h += items.length
+    ? `<div class="shop-grid">${items.map(it=>`<div class="panel shop-item${it.lock?' locked':''}">`
+        + (it.img ? `<img class="si" src="${esc(it.img)}" alt="" loading="lazy" onerror="this.remove()">` : '')
+        + `<div class="sb"><span class="nm">${esc(it.name)}</span>`
+        + (it.lock ? `<span class="lk">${esc(it.note||'구매 불가')}</span>`
+                   : `<span class="pr">${esc(it.price||'가격 미정')}</span>${it.note?`<span class="nt">${esc(it.note)}</span>`:''}`)
+        + (it.limit ? `<span class="lm">문파 주간 한정 ${esc(it.limit)}개</span>` : '')
+        + `</div></div>`).join('')}</div>`
+    : `<div class="panel card"><div class="empty">아직 등록된 품목이 없습니다.</div></div>`;
+  $('v-shop').innerHTML = h;
+}
 function renderAll(){
   $('brand').innerHTML = `${esc(guildName())}<span>출석부</span>`;
   document.title = `${guildName()} 출석부`;
-  renderHome(); renderAttendance(); renderDist(); renderFab();
+  renderHome(); renderAttendance(); renderDist(); renderShop(); renderFab();
 }
 
 /* ---------- 라우팅 ---------- */
-const VIEWS = ['home','attendance','distribution'];
+const VIEWS = ['home','attendance','distribution','shop'];
 function route(){
   const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   VIEWS.forEach(x=>$('v-'+x).hidden = x!==v);
