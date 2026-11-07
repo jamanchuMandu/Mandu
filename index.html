@@ -336,6 +336,9 @@ table.mt select{padding:4px 8px;width:100%}
 .shop-item .lk{font-size:13px;font-weight:700;color:var(--warn)}
 .shop-item.locked{opacity:.6}
 @media (max-width:420px){.tabs a{padding:8px 9px}}
+/* 문파 소개 영상 (세로 영상) */
+.video-card .vwrap{display:flex;justify-content:center}
+.video-card video{width:100%;max-width:380px;max-height:78vh;aspect-ratio:9/16;border-radius:14px;background:#000;display:block}
 /* 팝업 공지 */
 .modal.pop{width:min(480px,100%)}
 .pop-body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -577,7 +580,13 @@ function renderHome(){
     rds.forEach(r=> h += `<div class="rd"><span class="chip ${rkClass(r)}">${r}</span><p>${esc(rd[r])}</p></div>`);
     h += '</div></div>';
   }
+  // 문파 소개 영상: 저장소에 promo.mp4가 있으면 보이고, 없으면 숨김
+  h += `<div class="panel card video-card" id="videoCard" hidden><h2>문파 소개 영상<small>15초</small></h2>
+    <div class="vwrap"><video id="promoVideo" src="promo.mp4" poster="promo_poster.jpg" controls playsinline preload="metadata"></video></div></div>`;
   $('v-home').innerHTML = h;
+  const v = $('promoVideo');
+  v.addEventListener('loadedmetadata', ()=>{ $('videoCard').hidden = false; });
+  v.addEventListener('error', ()=>{ $('videoCard').hidden = true; });
 }
 
 /* ---------- 출석부 (보기 전용) ---------- */
