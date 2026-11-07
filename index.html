@@ -102,7 +102,8 @@ input[type=text],input[type=date],input[type=number],select,textarea{font:13px v
 .chip.plain{background:var(--surface-2);color:var(--fg);font-weight:500}
 .rk0{background:var(--r0);color:var(--r0f)}.rk1{background:var(--r1);color:var(--r1f)}.rk2{background:var(--r2);color:var(--r2f)}
 .rk3{background:var(--r3);color:var(--r3f)}.rk4{background:var(--r4);color:var(--r4f)}.rk5{background:var(--r5);color:var(--r5f)}.rk6{background:var(--r6);color:var(--r6f)}
-.pi-list{display:flex;flex-direction:column;gap:6px}
+.pi-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;padding-right:4px}
+.cols2{align-items:start}
 .pi-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;background:var(--warn-soft)}
 .pi-item b{color:var(--warn);font-size:12px;font-variant-numeric:tabular-nums}
 .empty{padding:16px;border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:13px}
@@ -238,6 +239,15 @@ body{margin:0}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .loading{padding:40px 0;text-align:center;color:var(--muted)}
 footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
+.notice-card{padding:16px 20px;display:flex;gap:14px;align-items:flex-start;border-left:4px solid var(--accent)}
+.notice-card .ic{font-size:20px;line-height:1.4}
+.notice-card h2{margin:0 0 4px;font-size:15px}
+.notice-card .body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;max-width:80ch}
+.rd-list{display:flex;flex-direction:column;gap:10px}
+.rd{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:start}
+.rd .chip{justify-content:center}
+.rd p{margin:0;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:700px){.rd{grid-template-columns:minmax(0,1fr);gap:6px}.rd .chip{justify-self:start}}
 </style>
 </head>
 <body>
@@ -267,7 +277,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
       </div>
     </div>
     <div class="panel"><div class="grid-wrap"><table class="g" id="grid"></table></div></div>
-    <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · 예상등급: 이번 달 던전 불참 4회 이상이면 피만두</p>
+    <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · 예상등급: 최근 4주 던전 불참 4회 이상이면 피만두</p>
   </section>
   <section class="view" id="v-distribution" hidden></section>
 </main>
@@ -326,12 +336,15 @@ function distribute(){
    .slice(0,left).forEach(o=>res[o.i]++);
   return res;
 }
-/* 예상등급: 이번 달 1일~오늘 열린 던전(참석자 1명 이상) 중 X 횟수. △는 참여로 봄 */
+/* 예상등급: 최근 4주(이번 주 월요일 기준 3주 전 월요일 ~ 오늘)에 열린 던전 중 X(불참) 횟수. △는 참여로 봄 */
 function missWindow(){
   const t = new Date(); t.setHours(0,0,0,0);
-  const from = isoDay(new Date(t.getFullYear(), t.getMonth(), 1)), to = isoDay(t);
+  const f = new Date(t); f.setDate(f.getDate() - ((t.getDay()+6)%7) - 21);   // 3주 전 월요일
+  const iso = d => new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  const to = iso(t), from = iso(f);
+  // 참석자가 한 명도 없는 일정(아직 안 열렸거나 취소)은 불참 계산에서 제외
   const held = e => S.members.some(m=>S.att[m.id+'|'+e.id]);
-  return {from, to, month:t.getMonth()+1, evs: S.events.filter(e=>e.date>=from && e.date<=to && held(e))};
+  return {from, to, weeks:`W${isoWeek(from)}~W${isoWeek(to)}`, evs: S.events.filter(e=>e.date>=from && e.date<=to && held(e))};
 }
 function expected(m, win){
   const miss = win.evs.filter(e=>!S.att[m.id+'|'+e.id]).length;
@@ -364,13 +377,13 @@ function renderHome(){
   const heldLast = lastEvs.filter(e=>S.members.some(m=>S.att[m.id+'|'+e.id]===1));
   const rate = heldLast.length ? Math.round(heldLast.reduce((a,e)=>a+S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length,0)/(heldLast.length*N)*100) : 0;
   let h = `<div class="hero"><span class="eyebrow">문파 출석부</span><h1>${esc(guildName())}</h1>`;
-  if(notice()) h += `<div class="notice">${esc(notice())}</div>`;
   h += `<div class="meta">집계 기간 ${evs.length?fmtDate(evs[0].date)+' ~ '+fmtDate(evs[evs.length-1].date):'-'}${UPDATED?` · 마지막 업데이트 ${UPDATED}`:''}</div></div>`;
+  if(notice()) h += `<div class="panel notice-card"><span class="ic" aria-hidden="true">📢</span><div><h2>공지사항</h2><div class="body">${esc(notice())}</div></div></div>`;
   h += `<div class="tiles">
     <div class="panel tile"><span>문파원</span><b>${S.members.length}<small>명</small></b></div>
     <div class="panel tile"><span>${lastW?`Week ${lastW} 평균 참여율`:'최근 참여율'}</span><b>${rate}<small>%</small></b></div>
     <div class="panel tile"><span>구매가능갯수</span><b>${Math.floor(+S.budget||0)}<small>개</small></b></div>
-    <div class="panel tile${pis.length?' warn':''}"><span>${win.month}월 피만두 예상</span><b>${pis.length}<small>명</small></b></div>
+    <div class="panel tile${pis.length?' warn':''}"><span>최근 4주 피만두 예상</span><b>${pis.length}<small>명</small></b></div>
   </div>`;
   h += `<div class="cols2"><div class="panel card"><h2>${lastW?`Week ${lastW} 컨텐츠별 참여`:'컨텐츠별 참여'}<small>참석 인원 / 전체 ${S.members.length}명</small></h2>`;
   if(lastEvs.length){
@@ -380,9 +393,9 @@ function renderHome(){
         <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:var(--t-${e.type}-fg)"></div></div><span class="v">${n}명 · ${p}%</span></div>`;
     }).join('') + '</div>';
   } else h += '<div class="empty">아직 등록된 일정이 없습니다.</div>';
-  h += `</div><div class="panel card"><h2>${win.month}월 피만두 예상<small>던전 불참 ${MISS_LIMIT}회 이상 · 이번 달 열린 던전 ${win.evs.length}개</small></h2>`;
+  h += `</div><div class="panel card"><h2>최근 4주 피만두 예상<small>${win.weeks} · 던전 불참 ${MISS_LIMIT}회 이상 · 열린 던전 ${win.evs.length}개</small></h2>`;
   h += pis.length ? '<div class="pi-list">' + pis.map(x=>`<div class="pi-item"><span>${esc(x.m.name)} ${x.m.rank?rankChip(x.m.rank):''}</span><b>불참 ${x.miss}/${win.evs.length}</b></div>`).join('') + '</div>'
-                  : `<div class="empty">${win.evs.length<MISS_LIMIT?`이번 달은 던전이 ${win.evs.length}개 열려 아직 해당자가 없습니다.`:'해당자가 없습니다. 모두 잘하고 있어요.'}</div>`;
+                  : `<div class="empty">${win.evs.length<MISS_LIMIT?`최근 4주 동안 던전이 ${win.evs.length}개 열려 아직 해당자가 없습니다.`:'해당자가 없습니다. 모두 잘하고 있어요.'}</div>`;
   h += `</div></div>`;
   const groups = RANKS.map(r=>({r, ms:S.members.filter(m=>m.rank===r)})).filter(g=>g.ms.length);
   const none = S.members.filter(m=>!m.rank);
@@ -390,6 +403,12 @@ function renderHome(){
   groups.forEach(g=> h += `<div class="rg"><span class="chip ${rkClass(g.r)}">${g.r} · ${g.ms.length}</span><div class="names">${g.ms.map(m=>`<span class="chip plain">${esc(m.name)}</span>`).join('')}</div></div>`);
   if(none.length) h += `<div class="rg"><span class="chip plain">미지정 · ${none.length}</span><div class="names">${none.map(m=>`<span class="chip plain">${esc(m.name)}</span>`).join('')}</div></div>`;
   h += '</div></div>';
+  const rd = S.rankDesc || {}, rds = RANKS.filter(r=>rd[r]);
+  if(rds.length){
+    h += `<div class="panel card"><h2>직위 설명</h2><div class="rd-list">`;
+    rds.forEach(r=> h += `<div class="rd"><span class="chip ${rkClass(r)}">${r}</span><p>${esc(rd[r])}</p></div>`);
+    h += '</div></div>';
+  }
   $('v-home').innerHTML = h;
 }
 
@@ -400,7 +419,7 @@ function renderAttendance(){
   const {weeks, lastOfWeek} = weekGroups(evs);
   const we = id => lastOfWeek.has(id)?' wk-end':'';
   let h = '<thead><tr><th class="sticky c-dist" rowspan="3">분배</th><th class="sticky c-score" rowspan="3">참석<br>점수</th><th class="sticky c-name" rowspan="3">닉네임</th>';
-  h += `<th class="sticky c-rank" rowspan="3">직위</th><th class="sticky c-exp" rowspan="3" title="${fmtDate(win.from)} ~ ${fmtDate(win.to)} 던전 불참 ${MISS_LIMIT}회 이상이면 피만두">예상등급<br><small style="font-weight:400;color:var(--muted)">${win.month}월 집계</small></th>`;
+  h += `<th class="sticky c-rank" rowspan="3">직위</th><th class="sticky c-exp" rowspan="3" title="${fmtDate(win.from)} ~ ${fmtDate(win.to)} 던전 불참 ${MISS_LIMIT}회 이상이면 피만두">예상등급<br><small style="font-weight:400;color:var(--muted)">최근 4주</small></th>`;
   weeks.forEach(w=> h += `<th class="week" colspan="${w.n}">Week ${w.w}</th>`);
   h += '</tr><tr>' + evs.map(e=>`<th class="ev ty-${e.type}${we(e.id)}">${TYPES[typeIdx(e.type)].name}</th>`).join('');
   h += '</tr><tr>' + evs.map(e=>`<th class="${we(e.id)}">${fmtDate(e.date)}</th>`).join('') + '</tr></thead><tbody>';
