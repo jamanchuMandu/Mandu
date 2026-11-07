@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>문파 출석부</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 상단 고정 내비(홈·출석부·분배표) → 홈은 히어로+요약 카드+직위 명단, 출석부는 고정 열 가로 스크롤 그리드. 보기 전용 */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --surface-2:#f7f8fb; --line:#e3e7ef; --fg:#1f2533; --muted:#6b7385;
+  --accent:#5b7cfa; --accent-soft:#e8edff; --warn:#c0392b; --warn-soft:#fde4e1;
+  --t-yo:#ece6ff; --t-yo-fg:#6b4fd8; --t-gy:#e2f1ff; --t-gy-fg:#2b78c2;
+  --t-mi:#e1f5ea; --t-mi-fg:#2f8a5b; --t-si:#ffeedd; --t-si-fg:#c06a1d;
+  --on:#5b7cfa; --on-fg:#ffffff;
+  --row-a:#eef4ff; --row-b:#fff4e6; --name-a:#dfe9ff; --name-b:#ffe8c9;
+  --r0:#fff1c2; --r0f:#8a5d00; --r1:#ffe2cc; --r1f:#b45a12; --r2:#ece6ff; --r2f:#6b4fd8; --r3:#e2f1ff; --r3f:#2b78c2;
+  --r4:#e1f5ea; --r4f:#2f8a5b; --r5:#fde4e1; --r5f:#c0392b; --r6:#ffe6f0; --r6f:#b8336a;
+  --hero-a:#e8edff; --hero-b:#fff4e6;
+  --font:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+  --shadow:0 1px 2px rgba(30,40,70,.06),0 4px 16px rgba(30,40,70,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#171a21; --surface:#20242d; --surface-2:#262b35; --line:#323846; --fg:#e7eaf1; --muted:#9aa2b4;
+  --accent:#8aa2ff; --accent-soft:#2a3150; --warn:#ff8a7d; --warn-soft:#3d2422;
+  --t-yo:#2f2848; --t-yo-fg:#c3b2ff; --t-gy:#1f3044; --t-gy-fg:#9ccbff; --t-mi:#1f3a2c; --t-mi-fg:#93d8b0; --t-si:#3f2e1d; --t-si-fg:#f3b77e;
+  --on:#7b95ff; --on-fg:#10131a;
+  --row-a:#1f2738; --row-b:#2e2820; --name-a:#28324a; --name-b:#3a3122;
+  --r0:#3d3418; --r0f:#f3cf6b; --r1:#3f2e1d; --r1f:#f3b77e; --r2:#2f2848; --r2f:#c3b2ff; --r3:#1f3044; --r3f:#9ccbff;
+  --r4:#1f3a2c; --r4f:#93d8b0; --r5:#3d2422; --r5f:#ff8a7d; --r6:#3d2230; --r6f:#ff9cc4;
+  --hero-a:#232a44; --hero-b:#33291d; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#171a21; --surface:#20242d; --surface-2:#262b35; --line:#323846; --fg:#e7eaf1; --muted:#9aa2b4;
+  --accent:#8aa2ff; --accent-soft:#2a3150; --warn:#ff8a7d; --warn-soft:#3d2422;
+  --t-yo:#2f2848; --t-yo-fg:#c3b2ff; --t-gy:#1f3044; --t-gy-fg:#9ccbff; --t-mi:#1f3a2c; --t-mi-fg:#93d8b0; --t-si:#3f2e1d; --t-si-fg:#f3b77e;
+  --on:#7b95ff; --on-fg:#10131a;
+  --row-a:#1f2738; --row-b:#2e2820; --name-a:#28324a; --name-b:#3a3122;
+  --r0:#3d3418; --r0f:#f3cf6b; --r1:#3f2e1d; --r1f:#f3b77e; --r2:#2f2848; --r2f:#c3b2ff; --r3:#1f3044; --r3f:#9ccbff;
+  --r4:#1f3a2c; --r4f:#93d8b0; --r5:#3d2422; --r5f:#ff8a7d; --r6:#3d2230; --r6f:#ff9cc4;
+  --hero-a:#232a44; --hero-b:#33291d; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--font);font-size:14px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.in{max-width:1600px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+/* 내비 */
+nav.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+nav.top .in{display:flex;align-items:center;gap:12px;height:56px}
+.brand{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.brand span{color:var(--muted);font-weight:500;font-size:12px;margin-left:6px}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tabs a{text-decoration:none;color:var(--muted);font-weight:600;padding:8px 12px;border-radius:8px;white-space:nowrap}
+.tabs a:hover{background:var(--surface-2);color:var(--fg)}
+.tabs a.cur{background:var(--accent-soft);color:var(--accent)}
+.tools{display:flex;gap:6px}
+main{padding-block:20px 90px}
+.view{display:flex;flex-direction:column;gap:14px}
+h1,h2,h3{text-wrap:balance}
+/* 버튼/입력 */
+button,.btn{font:500 13px var(--font);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+button:hover,.btn:hover{background:var(--surface-2)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{filter:brightness(1.05)}
+button.danger{background:var(--warn);border-color:var(--warn);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=date],input[type=number],select,textarea{font:13px var(--font);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:7px 10px}
+#btnLock.on{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.hint{font-size:12px;color:var(--muted)}
+/* 홈 */
+.hero{border-radius:16px;padding:28px 24px;background:linear-gradient(120deg,var(--hero-a),var(--hero-b));display:flex;flex-direction:column;gap:10px}
+.hero .eyebrow{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.hero h1{margin:0;font-size:clamp(26px,4vw,38px);letter-spacing:-.02em}
+.hero .notice{font-size:15px;line-height:1.6;max-width:65ch;white-space:pre-wrap}
+.hero .meta{font-size:12px;color:var(--muted)}
+.hero-edit{display:flex;flex-direction:column;gap:8px;max-width:640px}
+.hero-edit input{font-size:18px;font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.tile{padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.tile span{font-size:12px;color:var(--muted)}
+.tile b{font-size:26px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tile b small{font-size:13px;color:var(--muted);font-weight:500;margin-left:4px}
+.tile.warn b{color:var(--warn)}
+.cols2{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px}
+@media (max-width:860px){.cols2{grid-template-columns:minmax(0,1fr)}}
+.card{padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h2{margin:0;font-size:16px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h2 small{font-size:12px;color:var(--muted);font-weight:500}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:grid;grid-template-columns:110px minmax(0,1fr) 96px;gap:10px;align-items:center;font-size:13px}
+.bar-row .lab{font-weight:600}
+.bar-track{height:12px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar-fill{height:100%;border-radius:99px}
+.bar-row .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.rank-groups{display:flex;flex-direction:column;gap:12px}
+.rg{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:start}
+.rg .names{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.chip.plain{background:var(--surface-2);color:var(--fg);font-weight:500}
+.rk0{background:var(--r0);color:var(--r0f)}.rk1{background:var(--r1);color:var(--r1f)}.rk2{background:var(--r2);color:var(--r2f)}
+.rk3{background:var(--r3);color:var(--r3f)}.rk4{background:var(--r4);color:var(--r4f)}.rk5{background:var(--r5);color:var(--r5f)}.rk6{background:var(--r6);color:var(--r6f)}
+.pi-list{display:flex;flex-direction:column;gap:6px}
+.pi-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;background:var(--warn-soft)}
+.pi-item b{color:var(--warn);font-size:12px;font-variant-numeric:tabular-nums}
+.empty{padding:16px;border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:13px}
+/* 툴바 */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;padding:12px 14px;align-items:center}
+.stat{display:flex;flex-direction:column;gap:2px;padding:6px 14px;border-radius:10px;background:var(--surface-2);min-width:96px}
+.stat b{font-size:20px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.stat.budget{background:var(--accent-soft)}
+.stat.budget input{width:80px;font:700 20px var(--font);border:none;background:transparent;color:var(--fg);padding:0}
+.stat.budget input:read-only{pointer-events:none}
+.ok{color:#2f8a5b}.bad{color:var(--warn)}
+.tb-right{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+label.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+/* 출석 그리드 */
+.grid-wrap{overflow:auto;max-height:calc(100vh - 260px);border-radius:12px}
+table.g{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums;min-width:100%}
+table.g th,table.g td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;padding:0;height:34px}
+table.g thead{position:sticky;top:0;z-index:4}
+table.g thead th{background:var(--surface);font-weight:600}
+table.g thead tr:nth-child(1) th{height:32px}
+table.g thead tr:nth-child(2) th{height:34px;font-size:12px}
+table.g thead tr:nth-child(3) th{height:28px;font-size:12px;color:var(--muted);font-weight:500}
+.sticky{position:sticky;z-index:2;background:var(--surface)}
+thead .sticky{z-index:5}
+.c-dist{left:0;width:56px;min-width:56px}
+.c-score{left:56px;width:56px;min-width:56px}
+.c-name{left:112px;width:150px;min-width:150px}
+.c-rank{left:262px;width:112px;min-width:112px}
+.c-exp{left:374px;width:96px;min-width:96px;border-right:2px solid var(--line)!important}
+td.c-name{font-weight:500;text-align:left!important;padding:0 10px!important}
+td.c-name .nm{display:flex;align-items:center;justify-content:space-between;gap:6px}
+td.c-name .del{visibility:hidden;border:none;background:none;padding:2px 4px;color:var(--muted);font-size:12px}
+.editing tr:hover td.c-name .del{visibility:visible}
+td.c-dist{font-weight:700;color:var(--accent);font-size:15px}
+td.c-score{font-weight:600}
+td.c-rank{padding:0 4px!important}
+td.c-rank select{width:100%;height:26px;padding:0 4px;font:500 12px var(--font);border:1px solid transparent;border-radius:6px;background:transparent;color:var(--fg);cursor:pointer}
+td.c-rank select:hover{border-color:var(--line);background:var(--surface)}
+td.c-rank select.empty{color:var(--muted)}
+td.c-exp{font-size:12px;line-height:1.2}
+td.c-exp .gr{font-weight:700}
+td.c-exp .gr.warn{color:var(--warn)}
+td.c-exp .gr.keep{color:var(--muted);font-weight:500}
+td.c-exp small{display:block;font-size:10px;color:var(--muted)}
+.week{font-size:13px;letter-spacing:.02em}
+.wk-end{border-right:2px solid var(--line)!important}
+.ev{min-width:92px;padding:0 6px!important;position:relative}
+.ev .x{display:none;position:absolute;top:2px;right:2px;border:none;background:none;padding:0 3px;font-size:11px;color:inherit;opacity:.7;cursor:pointer}
+.editing .ev:hover .x{display:block}
+.ty-yo{background:var(--t-yo)!important;color:var(--t-yo-fg)}
+.ty-gy{background:var(--t-gy)!important;color:var(--t-gy-fg)}
+.ty-mi{background:var(--t-mi)!important;color:var(--t-mi-fg)}
+.ty-si{background:var(--t-si)!important;color:var(--t-si-fg)}
+td.cell{user-select:none;min-width:92px}
+.editing td.cell{cursor:pointer}
+.editing td.cell:hover{box-shadow:inset 0 0 0 2px var(--accent)}
+td.cell .dot{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:7px;font-size:12px;font-weight:700}
+td.cell .dot::after{content:"X";color:var(--muted);opacity:.45;font-weight:600}
+td.cell.on .dot{background:var(--on)}
+td.cell.on .dot::after{content:"O";color:var(--on-fg);opacity:1;font-weight:700}
+td.cell.tri .dot{background:var(--t-si);border:1.5px dashed var(--t-si-fg)}
+td.cell.tri .dot::after{content:"△";color:var(--t-si-fg);opacity:1;font-weight:700}
+.tri-n{color:var(--t-si-fg)}
+table.g tbody tr:nth-child(odd) td{background-color:var(--row-a)}
+table.g tbody tr:nth-child(even) td{background-color:var(--row-b)}
+table.g tbody tr:nth-child(odd) td.c-name{background-color:var(--name-a)}
+table.g tbody tr:nth-child(even) td.c-name{background-color:var(--name-b)}
+table.g tbody tr:hover td{background-image:linear-gradient(rgba(91,124,250,.12),rgba(91,124,250,.12))}
+table.g tfoot td{position:sticky;bottom:0;background:var(--surface-2);font-weight:600;font-size:12px;color:var(--muted);z-index:2}
+table.g tfoot td.sticky{z-index:4}
+.addrow{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px;align-items:center}
+.addrow .sep{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+/* 분배표 */
+.dist-wrap{overflow-x:auto}
+table.d{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.d th{font-size:12px;color:var(--muted);font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+table.d td{padding:9px 12px;border-bottom:1px solid var(--line)}
+table.d tr:nth-child(odd) td{background:var(--row-a)}
+table.d tr:nth-child(even) td{background:var(--row-b)}
+table.d .num{text-align:right}
+table.d .big{font-size:18px;font-weight:700;color:var(--accent);text-align:right}
+table.d .rk{color:var(--muted);width:48px}
+.mini{height:8px;border-radius:99px;background:var(--accent);opacity:.75;min-width:2px}
+/* 게시 바 */
+.pubbar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;display:flex;gap:10px;align-items:center;padding:10px 12px 10px 18px;border-radius:14px;background:var(--fg);color:var(--bg);box-shadow:0 8px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
+.pubbar span{font-size:13px;font-weight:600}
+.pubbar button{border-color:transparent}
+.pubbar .ghost{background:transparent;color:var(--bg);border:1px solid rgba(255,255,255,.3)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60;max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+/* 모달 */
+.overlay{position:fixed;inset:0;background:rgba(15,20,35,.35);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:50;padding:16px}
+.modal{width:min(760px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden}
+.modal.sm{width:min(400px,100%)}
+.m-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.m-head h2{margin:0;font-size:17px}
+.m-head button{border:none;background:none}
+.m-body{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.m-body h3{margin:6px 0 0;font-size:14px}
+.m-body p{margin:0;line-height:1.6}
+.m-body textarea{width:100%;font:13px/1.5 var(--font);background:var(--surface-2);resize:vertical;tab-size:12}
+.m-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
+.m-foot.end{justify-content:flex-end}
+.cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.colcard{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid var(--line)}
+.colcard.off{opacity:.5}
+.colcard .top{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.colcard .meta{font-size:12px;opacity:.85}
+.mt-wrap{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+table.mt{width:100%;border-collapse:collapse}
+table.mt th,table.mt td{height:32px;padding:0 10px;text-align:left;border-bottom:1px solid var(--line)}
+table.mt thead th{position:sticky;top:0;background:var(--surface-2);font-size:12px;color:var(--muted)}
+table.mt select{padding:4px 8px;width:100%}
+.mchip{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+.mchip.exact{background:var(--t-mi);color:var(--t-mi-fg)}
+.mchip.guess{background:var(--t-si);color:var(--t-si-fg)}
+.mchip.none{background:var(--warn-soft);color:var(--warn)}
+.ox{font-weight:700;letter-spacing:.15em;font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:700px){
+  nav.top .in{flex-wrap:wrap;height:auto;padding-block:8px;row-gap:6px}
+  .tabs{margin-left:0;order:3;width:100%}
+  .tools{margin-left:auto}
+  .c-name{width:110px;min-width:110px}
+  .c-rank,.c-exp{position:static!important}
+  .grid-wrap{max-height:none}
+  .bar-row{grid-template-columns:72px minmax(0,1fr) 84px}
+  .rg{grid-template-columns:minmax(0,1fr)}
+}
+
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.loading{padding:40px 0;text-align:center;color:var(--muted)}
+footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<nav class="top"><div class="in">
+  <div class="brand" id="brand">문파 출석부</div>
+  <div class="tabs">
+    <a href="#home" data-v="home">홈</a>
+    <a href="#attendance" data-v="attendance">출석부</a>
+    <a href="#distribution" data-v="distribution">분배표</a>
+  </div>
+  <div class="tools"><button id="btnTheme" title="테마 전환" aria-label="테마 전환">◐</button></div>
+</div></nav>
+<main class="in">
+  <section class="view" id="v-home"><div class="loading">출석 데이터를 불러오는 중…</div></section>
+  <section class="view" id="v-attendance" hidden>
+    <div class="panel toolbar">
+      <div class="stat budget"><span>구매가능갯수</span><b id="sBudget">0</b></div>
+      <div class="stat"><span>인원</span><b id="sMembers">0</b></div>
+      <div class="stat"><span>총 참석점수</span><b id="sTotal">0</b></div>
+      <div class="tb-right">
+        <select id="sort" aria-label="정렬">
+          <option value="orig">원래 순서</option><option value="score">참석점수 높은 순</option>
+          <option value="rank">직위 순</option><option value="name">닉네임 순</option>
+        </select>
+        <input type="text" id="search" placeholder="닉네임 검색" size="12">
+        <button id="btnCopy" title="엑셀에 붙여넣을 수 있게 표 전체를 복사">📋 엑셀용 복사</button>
+      </div>
+    </div>
+    <div class="panel"><div class="grid-wrap"><table class="g" id="grid"></table></div></div>
+    <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · 예상등급: 이번 달 던전 불참 4회 이상이면 피만두</p>
+  </section>
+  <section class="view" id="v-distribution" hidden></section>
+</main>
+<footer class="in">보기 전용 페이지입니다 · 출석 기록은 문주가 관리합니다</footer>
+<div class="toast" id="toast" role="status"></div>
+<script>
+/* ===== 여기만 바꾸면 됩니다 ===== */
+const GUILD_NAME = '우리 문파';          // 문파 이름
+const NOTICE = '';                      // 홈 화면 공지 (비워 두면 안 보임)
+/* ================================ */
+
+const TYPES = [
+  {id:'yo', name:'요신 토벌령', ab:'요신'},
+  {id:'gy', name:'결계지방어', ab:'결계'},
+  {id:'mi', name:'미혹의 정원', ab:'미혹'},
+  {id:'si', name:'신기 쟁탈전', ab:'신기'},
+];
+const typeIdx = id => TYPES.findIndex(t=>t.id===id);
+const RANKS = ['문주','군만두장군','찜기호법','군만두','물만두','피만두','왕만두'];
+const PI_RANK = '피만두', MISS_LIMIT = 4;
+let S = null, UPDATED = '';
+
+const $ = id => document.getElementById(id);
+function isoWeek(ds){
+  const d = new Date(ds+'T00:00:00'); const t = new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day = t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-day);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  return Math.ceil(((t-y0)/864e5+1)/7);
+}
+const isoDay = d => new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const fmtDate = ds => { const [,m,d]=ds.split('-'); return `${+m}월 ${+d}일`; };
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2000); }
+const rkClass = r => { const i=RANKS.indexOf(r); return i<0?'plain':'rk'+i; };
+const rankChip = r => r ? `<span class="chip ${rkClass(r)}">${esc(r)}</span>` : '<span class="hint">—</span>';
+const guildName = () => S.guild || GUILD_NAME;
+const notice = () => S.notice || NOTICE;
+
+/* ---------- 계산 (로컬 출석체크 파일과 같은 규칙) ---------- */
+function sortedEvents(){
+  return S.events.slice().sort((a,b)=> isoWeek(a.date)-isoWeek(b.date) || typeIdx(a.type)-typeIdx(b.type) || a.date.localeCompare(b.date));
+}
+// 출석값: 1 = O(1점), 2 = △(표시만, 0점)
+function score(mid){ return S.events.reduce((n,e)=>n+(S.att[mid+'|'+e.id]===1?1:0),0); }
+/* 최대잔여법 분배: 합계가 항상 구매가능갯수와 같음. 동률은 위쪽 행 우선 */
+function distribute(){
+  const ms = S.members, sc = ms.map(m=>score(m.id)), res = ms.map(()=>0);
+  let budget = Math.max(0, Math.floor(+S.budget||0));
+  if(S.minOne) sc.forEach((s,i)=>{ if(s>0 && budget>0){ res[i]=1; budget--; } });
+  const total = sc.reduce((a,b)=>a+b,0);
+  if(total===0 || budget===0) return res;
+  const q = sc.map(s=>budget*s/total);
+  let left = budget;
+  q.forEach((v,i)=>{ const f=Math.floor(v+1e-9); res[i]+=f; left-=f; });
+  q.map((v,i)=>({i,r:v-Math.floor(v+1e-9)})).filter(o=>sc[o.i]>0).sort((a,b)=>b.r-a.r||a.i-b.i)
+   .slice(0,left).forEach(o=>res[o.i]++);
+  return res;
+}
+/* 예상등급: 이번 달 1일~오늘 열린 던전(참석자 1명 이상) 중 X 횟수. △는 참여로 봄 */
+function missWindow(){
+  const t = new Date(); t.setHours(0,0,0,0);
+  const from = isoDay(new Date(t.getFullYear(), t.getMonth(), 1)), to = isoDay(t);
+  const held = e => S.members.some(m=>S.att[m.id+'|'+e.id]);
+  return {from, to, month:t.getMonth()+1, evs: S.events.filter(e=>e.date>=from && e.date<=to && held(e))};
+}
+function expected(m, win){
+  const miss = win.evs.filter(e=>!S.att[m.id+'|'+e.id]).length;
+  return {miss, pi: win.evs.length>0 && miss>=MISS_LIMIT};
+}
+function weekGroups(evs){
+  const weeks=[]; evs.forEach(e=>{ const w=isoWeek(e.date), l=weeks[weeks.length-1]; if(l&&l.w===w) l.n++; else weeks.push({w,n:1}); });
+  const lastOfWeek = new Set(); let k=0; weeks.forEach(w=>{ k+=w.n; lastOfWeek.add(evs[k-1].id); });
+  return {weeks, lastOfWeek};
+}
+function orderedRows(sortBy, q){
+  const dist = distribute();
+  let rows = S.members.map((m,i)=>({m,i,s:score(m.id),d:dist[i]}));
+  if(q) rows = rows.filter(r=>r.m.name.includes(q));
+  if(sortBy==='score') rows.sort((a,b)=>b.s-a.s||a.i-b.i);
+  if(sortBy==='dist') rows.sort((a,b)=>b.d-a.d||b.s-a.s||a.i-b.i);
+  if(sortBy==='name') rows.sort((a,b)=>a.m.name.localeCompare(b.m.name,'ko'));
+  if(sortBy==='rank') rows.sort((a,b)=>{ const ra=RANKS.indexOf(a.m.rank), rb=RANKS.indexOf(b.m.rank); return (ra<0?99:ra)-(rb<0?99:rb)||a.i-b.i; });
+  return rows;
+}
+
+/* ---------- 홈 ---------- */
+function renderHome(){
+  const evs = sortedEvents(), win = missWindow();
+  const pis = S.members.map(m=>({m,...expected(m,win)})).filter(x=>x.pi).sort((a,b)=>b.miss-a.miss);
+  const {weeks} = weekGroups(evs);
+  const lastW = weeks.length ? weeks[weeks.length-1].w : null;
+  const lastEvs = evs.filter(e=>isoWeek(e.date)===lastW);
+  const N = S.members.length || 1;
+  const heldLast = lastEvs.filter(e=>S.members.some(m=>S.att[m.id+'|'+e.id]===1));
+  const rate = heldLast.length ? Math.round(heldLast.reduce((a,e)=>a+S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length,0)/(heldLast.length*N)*100) : 0;
+  let h = `<div class="hero"><span class="eyebrow">문파 출석부</span><h1>${esc(guildName())}</h1>`;
+  if(notice()) h += `<div class="notice">${esc(notice())}</div>`;
+  h += `<div class="meta">집계 기간 ${evs.length?fmtDate(evs[0].date)+' ~ '+fmtDate(evs[evs.length-1].date):'-'}${UPDATED?` · 마지막 업데이트 ${UPDATED}`:''}</div></div>`;
+  h += `<div class="tiles">
+    <div class="panel tile"><span>문파원</span><b>${S.members.length}<small>명</small></b></div>
+    <div class="panel tile"><span>${lastW?`Week ${lastW} 평균 참여율`:'최근 참여율'}</span><b>${rate}<small>%</small></b></div>
+    <div class="panel tile"><span>구매가능갯수</span><b>${Math.floor(+S.budget||0)}<small>개</small></b></div>
+    <div class="panel tile${pis.length?' warn':''}"><span>${win.month}월 피만두 예상</span><b>${pis.length}<small>명</small></b></div>
+  </div>`;
+  h += `<div class="cols2"><div class="panel card"><h2>${lastW?`Week ${lastW} 컨텐츠별 참여`:'컨텐츠별 참여'}<small>참석 인원 / 전체 ${S.members.length}명</small></h2>`;
+  if(lastEvs.length){
+    h += '<div class="bars">' + lastEvs.map(e=>{
+      const n=S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length, p=Math.round(n/N*100);
+      return `<div class="bar-row"><span class="lab" style="color:var(--t-${e.type}-fg)">${TYPES[typeIdx(e.type)].ab} <span class="hint">${+e.date.slice(5,7)}/${+e.date.slice(8)}</span></span>
+        <div class="bar-track"><div class="bar-fill" style="width:${p}%;background:var(--t-${e.type}-fg)"></div></div><span class="v">${n}명 · ${p}%</span></div>`;
+    }).join('') + '</div>';
+  } else h += '<div class="empty">아직 등록된 일정이 없습니다.</div>';
+  h += `</div><div class="panel card"><h2>${win.month}월 피만두 예상<small>던전 불참 ${MISS_LIMIT}회 이상 · 이번 달 열린 던전 ${win.evs.length}개</small></h2>`;
+  h += pis.length ? '<div class="pi-list">' + pis.map(x=>`<div class="pi-item"><span>${esc(x.m.name)} ${x.m.rank?rankChip(x.m.rank):''}</span><b>불참 ${x.miss}/${win.evs.length}</b></div>`).join('') + '</div>'
+                  : `<div class="empty">${win.evs.length<MISS_LIMIT?`이번 달은 던전이 ${win.evs.length}개 열려 아직 해당자가 없습니다.`:'해당자가 없습니다. 모두 잘하고 있어요.'}</div>`;
+  h += `</div></div>`;
+  const groups = RANKS.map(r=>({r, ms:S.members.filter(m=>m.rank===r)})).filter(g=>g.ms.length);
+  const none = S.members.filter(m=>!m.rank);
+  h += `<div class="panel card"><h2>문파원 직위<small>${S.members.length}명</small></h2><div class="rank-groups">`;
+  groups.forEach(g=> h += `<div class="rg"><span class="chip ${rkClass(g.r)}">${g.r} · ${g.ms.length}</span><div class="names">${g.ms.map(m=>`<span class="chip plain">${esc(m.name)}</span>`).join('')}</div></div>`);
+  if(none.length) h += `<div class="rg"><span class="chip plain">미지정 · ${none.length}</span><div class="names">${none.map(m=>`<span class="chip plain">${esc(m.name)}</span>`).join('')}</div></div>`;
+  h += '</div></div>';
+  $('v-home').innerHTML = h;
+}
+
+/* ---------- 출석부 (보기 전용) ---------- */
+function renderAttendance(){
+  const evs = sortedEvents(), dist = distribute(), win = missWindow();
+  const distMap = {}; S.members.forEach((m,i)=>distMap[m.id]=dist[i]);
+  const {weeks, lastOfWeek} = weekGroups(evs);
+  const we = id => lastOfWeek.has(id)?' wk-end':'';
+  let h = '<thead><tr><th class="sticky c-dist" rowspan="3">분배</th><th class="sticky c-score" rowspan="3">참석<br>점수</th><th class="sticky c-name" rowspan="3">닉네임</th>';
+  h += `<th class="sticky c-rank" rowspan="3">직위</th><th class="sticky c-exp" rowspan="3" title="${fmtDate(win.from)} ~ ${fmtDate(win.to)} 던전 불참 ${MISS_LIMIT}회 이상이면 피만두">예상등급<br><small style="font-weight:400;color:var(--muted)">${win.month}월 집계</small></th>`;
+  weeks.forEach(w=> h += `<th class="week" colspan="${w.n}">Week ${w.w}</th>`);
+  h += '</tr><tr>' + evs.map(e=>`<th class="ev ty-${e.type}${we(e.id)}">${TYPES[typeIdx(e.type)].name}</th>`).join('');
+  h += '</tr><tr>' + evs.map(e=>`<th class="${we(e.id)}">${fmtDate(e.date)}</th>`).join('') + '</tr></thead><tbody>';
+  orderedRows($('sort').value, $('search').value.trim()).forEach(({m,s})=>{
+    const rk = m.rank||'', ex = expected(m, win);
+    h += `<tr><td class="sticky c-dist">${distMap[m.id]}</td><td class="sticky c-score">${s}</td>`;
+    h += `<td class="sticky c-name"><div class="nm"><span>${esc(m.name)}</span></div></td>`;
+    h += `<td class="sticky c-rank">${rankChip(rk)}</td>`;
+    h += `<td class="sticky c-exp">${ex.pi?`<span class="gr warn">${PI_RANK}</span>`:`<span class="gr keep">${esc(rk||'유지')}</span>`}<small>불참 ${ex.miss}/${win.evs.length}</small></td>`;
+    evs.forEach(e=>{ const v=S.att[m.id+'|'+e.id]; h += `<td class="cell${v===1?' on':v===2?' tri':''}${we(e.id)}"><span class="dot"></span></td>`; });
+    h += '</tr>';
+  });
+  const piN = S.members.filter(m=>expected(m,win).pi).length;
+  h += `</tbody><tfoot><tr><td class="sticky c-dist"></td><td class="sticky c-score"></td><td class="sticky c-name" style="text-align:left;padding:0 10px">참석 인원</td><td class="sticky c-rank"></td><td class="sticky c-exp">${piN?`<span style="color:var(--warn)">피만두 ${piN}명</span>`:''}</td>`;
+  evs.forEach(e=>{ const n=S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length, t=S.members.filter(m=>S.att[m.id+'|'+e.id]===2).length; h+=`<td class="${we(e.id).trim()}">${n}명${t?` <span class="tri-n">△${t}</span>`:''}</td>`; });
+  h += '</tr></tfoot>';
+  $('grid').innerHTML = h;
+  const total = S.members.reduce((a,m)=>a+score(m.id),0);
+  $('sMembers').textContent = S.members.length; $('sTotal').textContent = total; $('sBudget').textContent = Math.floor(+S.budget||0);
+}
+
+/* ---------- 분배표 ---------- */
+function renderDist(){
+  const q = ($('dSearch')?.value||'').trim();
+  const rows = orderedRows('dist', q), max = Math.max(1,...rows.map(r=>r.d));
+  let h = `<div class="panel toolbar"><div class="stat budget"><span>구매가능갯수</span><b>${Math.floor(+S.budget||0)}</b></div>
+    <div class="stat"><span>받는 인원</span><b>${rows.filter(r=>r.d>0).length}</b></div>
+    <div class="tb-right"><span class="hint">참석점수 비율로 분배 (합계 = 구매가능갯수)</span><input type="text" id="dSearch" placeholder="닉네임 검색" size="12" value="${esc(q)}"></div></div>`;
+  h += `<div class="panel dist-wrap"><table class="d"><thead><tr><th>#</th><th>닉네임</th><th>직위</th><th class="num">참석점수</th><th style="width:30%"></th><th class="num">분배</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=> h += `<tr><td class="rk">${i+1}</td><td><b>${esc(r.m.name)}</b></td><td>${rankChip(r.m.rank)}</td><td class="num">${r.s}</td><td><div class="mini" style="width:${r.d/max*100}%"></div></td><td class="big">${r.d}</td></tr>`);
+  h += '</tbody></table></div>';
+  $('v-distribution').innerHTML = h;
+  $('dSearch').addEventListener('input', ()=>{ renderDist(); const n=$('dSearch'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); });
+}
+
+function renderAll(){
+  $('brand').innerHTML = `${esc(guildName())}<span>출석부</span>`;
+  document.title = `${guildName()} 출석부`;
+  renderHome(); renderAttendance(); renderDist();
+}
+
+/* ---------- 라우팅 ---------- */
+const VIEWS = ['home','attendance','distribution'];
+function route(){
+  const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+  VIEWS.forEach(x=>$('v-'+x).hidden = x!==v);
+  document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('cur', a.dataset.v===v));
+}
+window.addEventListener('hashchange', route);
+
+$('sort').addEventListener('change', ()=>S && renderAttendance());
+$('search').addEventListener('input', ()=>S && renderAttendance());
+$('btnCopy').addEventListener('click', async ()=>{
+  if(!S) return;
+  const evs = sortedEvents(), dist = distribute();
+  const lines = [['분배','참석점수','닉네임','직위',...evs.map(e=>`W${isoWeek(e.date)} ${TYPES[typeIdx(e.type)].name}`)].join('\t'),
+                 ['','','','',...evs.map(e=>fmtDate(e.date))].join('\t')];
+  S.members.forEach((m,i)=> lines.push([dist[i], score(m.id), m.name, m.rank||'', ...evs.map(e=>({1:1,2:'△'})[S.att[m.id+'|'+e.id]]??'')].join('\t')));
+  const text = lines.join('\n');
+  try{ await navigator.clipboard.writeText(text); toast('복사했습니다 · 엑셀에 붙여넣기 하세요'); }
+  catch(e){ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast('복사했습니다'); }catch(_){ toast('복사하지 못했습니다'); } ta.remove(); }
+});
+$('btnTheme').addEventListener('click', ()=>{
+  const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  const next = cur==='dark'?'light':'dark';
+  document.documentElement.dataset.theme = next; try{ localStorage.setItem('guild-theme', next) }catch(e){}
+});
+try{ const t=localStorage.getItem('guild-theme'); if(t) document.documentElement.dataset.theme=t; }catch(e){}
+route();
+
+/* ---------- data.json 불러오기 ---------- */
+(async ()=>{
+  try{
+    const res = await fetch('data.json?t='+Date.now(), {cache:'no-store'});
+    if(!res.ok) throw new Error(res.status);
+    const d = await res.json();
+    if(!d.members || !d.events) throw new Error('형식');
+    S = Object.assign({att:{}, budget:0}, d);
+    const lm = res.headers.get('last-modified');
+    if(lm){ const t = new Date(lm); if(!isNaN(t)) UPDATED = `${t.getMonth()+1}월 ${t.getDate()}일`; }
+    renderAll();
+  }catch(e){
+    $('v-home').innerHTML = `<div class="panel card"><h2>출석 데이터를 불러오지 못했습니다</h2><p class="hint" style="margin:0">저장소에 <b>data.json</b> 파일이 있는지 확인하세요. 컴퓨터에서 이 파일을 바로 열면 보안 제한 때문에 데이터가 안 보이고, GitHub Pages 주소로 열어야 보입니다.</p></div>`;
+  }
+})();
+</script>
+</body>
+</html>
