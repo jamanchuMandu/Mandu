@@ -345,11 +345,14 @@ const guildName = () => S.guild || GUILD_NAME;
 const notice = () => S.notice || NOTICE;
 
 /* ---------- 계산 (로컬 출석체크 파일과 같은 규칙) ---------- */
+/* 숨긴 주차(보상 분배가 끝난 주)는 표와 점수에서 빠짐. 피만두 예상(missWindow)은 S.events 전체를 봄 */
+function weekKey(ds){ const d=new Date(ds+'T00:00:00'); d.setDate(d.getDate()-((d.getDay()+6)%7)); return isoDay(d); }
+const isHidden = e => (S.hiddenWeeks||[]).includes(weekKey(e.date));
 function sortedEvents(){
-  return S.events.slice().sort((a,b)=> isoWeek(a.date)-isoWeek(b.date) || typeIdx(a.type)-typeIdx(b.type) || a.date.localeCompare(b.date));
+  return S.events.filter(e=>!isHidden(e)).sort((a,b)=> isoWeek(a.date)-isoWeek(b.date) || typeIdx(a.type)-typeIdx(b.type) || a.date.localeCompare(b.date));
 }
 // 출석값: 1 = O(1점), 2 = △(표시만, 0점)
-function score(mid){ return S.events.reduce((n,e)=>n+(S.att[mid+'|'+e.id]===1?1:0),0); }
+function score(mid){ return S.events.reduce((n,e)=>n+(!isHidden(e) && S.att[mid+'|'+e.id]===1?1:0),0); }
 /* 최대잔여법 분배: 합계가 항상 구매가능갯수와 같음. 동률은 위쪽 행 우선 */
 function distribute(){
   const ms = S.members, sc = ms.map(m=>score(m.id)), res = ms.map(()=>0);
