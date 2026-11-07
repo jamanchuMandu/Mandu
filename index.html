@@ -377,7 +377,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
   <section class="view" id="v-home"><div class="loading">출석 데이터를 불러오는 중…</div></section>
   <section class="view" id="v-attendance" hidden>
     <div class="panel toolbar">
-      <div class="stat budget"><span>구매가능갯수</span><b id="sBudget">0</b></div>
+      <div class="stat budget"><span>가호 주머니 구매가능 갯수</span><b id="sBudget">0</b></div>
       <div class="stat"><span>인원</span><b id="sMembers">0</b></div>
       <div class="stat"><span>총 참석점수</span><b id="sTotal">0</b></div>
       <div class="tb-right">
@@ -441,7 +441,7 @@ function sortedEvents(){
 }
 // 출석값: 1 = O(1점), 2 = △(표시만, 0점)
 function score(mid){ return S.events.reduce((n,e)=>n+(!isHidden(e) && S.att[mid+'|'+e.id]===1?1:0),0); }
-/* 최대잔여법 분배: 합계가 항상 구매가능갯수와 같음. 동률은 위쪽 행 우선 */
+/* 최대잔여법 분배: 합계가 항상 가호 주머니 구매가능 갯수와 같음. 동률은 위쪽 행 우선 */
 function distribute(){
   const ms = S.members, sc = ms.map(m=>score(m.id)), res = ms.map(()=>0);
   let budget = Math.max(0, Math.floor(+S.budget||0));
@@ -527,7 +527,7 @@ function renderHome(){
   h += `<div class="tiles">
     <div class="panel tile"><span>문파원</span><b>${S.members.length}<small>명</small></b></div>
     <div class="panel tile"><span>${lastW?`Week ${lastW} 평균 참여율`:'최근 참여율'}</span><b>${rate}<small>%</small></b></div>
-    <div class="panel tile"><span>구매가능갯수</span><b>${Math.floor(+S.budget||0)}<small>개</small></b></div>
+    <div class="panel tile"><span>가호 주머니 구매가능 갯수</span><b>${Math.floor(+S.budget||0)}<small>개</small></b></div>
     <div class="panel tile${pis.length?' warn':''}"><span>최근 4주 피만두 예상</span>${win.grace?`<b>유예<small>${+COUNT_FROM.slice(5,7)}/${+COUNT_FROM.slice(8)}부터 집계</small></b>`:`<b>${pis.length}<small>명</small></b>`}</div>
   </div>`;
   h += `<div class="cols2"><div class="panel card"><h2>${lastW?`Week ${lastW} 컨텐츠별 참여`:'컨텐츠별 참여'}<small>참석 인원 / 전체 ${S.members.length}명</small></h2>`;
@@ -612,7 +612,7 @@ function renderDist(){
 /* ---------- 문파상점 ---------- */
 function renderShop(){
   const items = (S.shop||[]).filter(it=>it && it.name);
-  let h = `<div class="panel toolbar"><div class="stat budget"><span>이번 구매가능갯수</span><b>${Math.floor(+S.budget||0)}</b></div>
+  let h = `<div class="panel toolbar"><div class="stat budget"><span>가호 주머니 구매가능 갯수</span><b>${Math.floor(+S.budget||0)}<small>개</small></b></div>
     <div class="stat"><span>품목</span><b>${items.length}</b></div>
     <div class="tb-right"><span class="hint">문주가 등록한 문파상점 품목과 가격입니다</span></div></div>`;
   h += items.length
