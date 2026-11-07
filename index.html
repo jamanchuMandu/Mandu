@@ -336,6 +336,11 @@ table.mt select{padding:4px 8px;width:100%}
 .shop-item .lk{font-size:13px;font-weight:700;color:var(--warn)}
 .shop-item.locked{opacity:.6}
 @media (max-width:420px){.tabs a{padding:8px 9px}}
+/* 팝업 공지 */
+.modal.pop{width:min(480px,100%)}
+.pop-body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.pop-foot{display:flex;justify-content:space-between;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+.pop-foot #popToday{background:transparent;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:700px){
   nav.top .in{flex-wrap:wrap;height:auto;padding-block:8px;row-gap:6px}
@@ -400,6 +405,13 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
 <footer class="in">보기 전용 페이지입니다 · 출석 기록은 문주가 관리합니다</footer>
 <nav class="fab" id="fab" aria-label="문파 채널"></nav>
 <div class="toast" id="toast" role="status"></div>
+<div class="overlay" id="popup" hidden>
+  <div class="modal panel pop" role="dialog" aria-modal="true" aria-labelledby="popTitle">
+    <div class="m-head"><h2 id="popTitle">공지</h2><button id="popX" aria-label="닫기">✕</button></div>
+    <div class="m-body"><div class="pop-body" id="popBody"></div></div>
+    <div class="pop-foot"><button id="popToday">오늘 하루 보지 않기</button><button class="primary" id="popClose">닫기</button></div>
+  </div>
+</div>
 <script>
 /* ===== 여기만 바꾸면 됩니다 ===== */
 const GUILD_NAME = '[강이태1] 자만추 문파';          // 문파 이름
@@ -686,6 +698,21 @@ $('btnTheme').addEventListener('click', ()=>{
 try{ const t=localStorage.getItem('guild-theme'); if(t) document.documentElement.dataset.theme=t; }catch(e){}
 route();
 
+/* ---------- 팝업 공지 (오늘 하루 보지 않기는 이 기기에만 기억) ---------- */
+function showPopup(){
+  const p = S.popup; if(!p || !p.on || !(p.title || p.body)) return;
+  const key = 'guild-popup-hide', today = isoDay(new Date());
+  try{ const h = JSON.parse(localStorage.getItem(key)||'null'); if(h && h.ver===p.ver && h.day===today) return; }catch(e){}
+  $('popTitle').textContent = p.title || '공지';
+  $('popBody').textContent = p.body || '';
+  $('popup').hidden = false; $('popClose').focus();
+  const close = ()=>{ $('popup').hidden = true; };
+  $('popClose').onclick = close; $('popX').onclick = close;
+  $('popToday').onclick = ()=>{ try{ localStorage.setItem(key, JSON.stringify({ver:p.ver, day:today})); }catch(e){} close(); };
+  $('popup').onclick = e=>{ if(e.target.id==='popup') close(); };
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !$('popup').hidden) close(); });
+}
+
 /* ---------- data.json 불러오기 ---------- */
 (async ()=>{
   try{
@@ -696,7 +723,7 @@ route();
     S = Object.assign({att:{}, budget:0}, d);
     const lm = res.headers.get('last-modified');
     if(lm){ const t = new Date(lm); if(!isNaN(t)) UPDATED = `${t.getMonth()+1}월 ${t.getDate()}일`; }
-    renderAll(); route();
+    renderAll(); route(); showPopup();
   }catch(e){
     $('v-home').innerHTML = `<div class="panel card"><h2>출석 데이터를 불러오지 못했습니다</h2><p class="hint" style="margin:0">저장소에 <b>data.json</b> 파일이 있는지 확인하세요. 컴퓨터에서 이 파일을 바로 열면 보안 제한 때문에 데이터가 안 보이고, GitHub Pages 주소로 열어야 보입니다.</p></div>`;
   }
