@@ -695,5 +695,8 @@
    "img": "shop/gaho_pouch.png",
    "lock": true
   }
+ ],
+ "hiddenWeeks": [
+  "2026-11-09"
  ]
 }
