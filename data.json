@@ -1,5 +1,5 @@
 {
- "budget": "139",
+ "budget": 154,
  "minOne": false,
  "events": [
   {
@@ -704,5 +704,6 @@
  ],
  "hiddenWeeks": [
   "2026-11-09"
- ]
+ ],
+ "tokens": 35648
 }
