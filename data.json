@@ -545,5 +545,155 @@
  "links": {
   "discord": "https://discord.gg/5e9d7ThD2",
   "kakao": "https://open.kakao.com/o/g40ZDhSi"
- }
+ },
+ "shop": [
+  {
+   "name": "요혼석",
+   "price": "45",
+   "limit": "500",
+   "img": "shop/yohon.png"
+  },
+  {
+   "name": "영웅 무기 도안 선택 상자",
+   "price": "3,500",
+   "limit": "30",
+   "img": "shop/hero_weapon.png"
+  },
+  {
+   "name": "산척의 방어구 도안 선택 상자",
+   "price": "3,500",
+   "limit": "30",
+   "img": "shop/sanchuk_armor.png"
+  },
+  {
+   "name": "영웅 장신구 도안 선택 상자",
+   "price": "3,500",
+   "limit": "30",
+   "img": "shop/hero_acc.png"
+  },
+  {
+   "name": "용맹의 절명 도술 조각 선택 상자",
+   "price": "4,600",
+   "limit": "10",
+   "img": "shop/yongmaeng_box.png"
+  },
+  {
+   "name": "용맹의 연타 도술 조각 선택 상자",
+   "price": "4,600",
+   "limit": "10",
+   "img": "shop/yongmaeng_box.png"
+  },
+  {
+   "name": "용맹의 강타 도술 조각 선택 상자",
+   "price": "4,600",
+   "limit": "10",
+   "img": "shop/yongmaeng_box.png"
+  },
+  {
+   "name": "용맹의 저격 도술 조각 선택 상자",
+   "price": "4,600",
+   "limit": "10",
+   "img": "shop/yongmaeng_box.png"
+  },
+  {
+   "name": "용맹의 강인 도술 조각 선택 상자",
+   "price": "4,600",
+   "limit": "10",
+   "img": "shop/yongmaeng_box.png"
+  },
+  {
+   "name": "용맹의 파멸 도술 조각 선택 상자",
+   "price": "4,600",
+   "limit": "10",
+   "img": "shop/yongmaeng_box.png"
+  },
+  {
+   "name": "용맹의 헌신 도술 조각 선택 상자",
+   "price": "4,600",
+   "limit": "10",
+   "img": "shop/yongmaeng_box.png"
+  },
+  {
+   "name": "전설 무기 도안 선택 상자",
+   "price": "",
+   "limit": "10",
+   "note": "문파 레벨 20 달성 시 구매 가능",
+   "img": "shop/locked_lv20.png",
+   "lock": true
+  },
+  {
+   "name": "산군의 위엄 방어구 도안 선택 상자",
+   "price": "",
+   "limit": "10",
+   "note": "문파 레벨 20 달성 시 구매 가능",
+   "img": "shop/locked_lv20.png",
+   "lock": true
+  },
+  {
+   "name": "산군의 어금니 장신구 도안 선택 상자",
+   "price": "",
+   "limit": "10",
+   "note": "문파 레벨 20 달성 시 구매 가능",
+   "img": "shop/locked_lv20.png",
+   "lock": true
+  },
+  {
+   "name": "용맹의 특별 도술 조각 랜덤 상자",
+   "price": "8,000",
+   "limit": "10",
+   "img": "shop/yongmaeng_random.png"
+  },
+  {
+   "name": "용맹의 특별 도술 조각 선택 상자",
+   "price": "27,500",
+   "limit": "5",
+   "img": "shop/yongmaeng_special.png"
+  },
+  {
+   "name": "희귀 가호의 정수",
+   "price": "25",
+   "limit": "200",
+   "img": "shop/gaho_rare.png"
+  },
+  {
+   "name": "영웅 가호의 정수",
+   "price": "115",
+   "limit": "200",
+   "img": "shop/gaho_hero.png"
+  },
+  {
+   "name": "전설 가호의 정수",
+   "price": "350",
+   "limit": "200",
+   "img": "shop/gaho_legend.png"
+  },
+  {
+   "name": "가호 주머니",
+   "price": "230",
+   "limit": "200",
+   "img": "shop/gaho_pouch.png"
+  },
+  {
+   "name": "가호 주머니",
+   "price": "230",
+   "limit": "100",
+   "img": "shop/gaho_pouch.png"
+  },
+  {
+   "name": "가호 주머니",
+   "price": "",
+   "limit": "100",
+   "note": "문파 레벨 13 달성 시 구매 가능",
+   "img": "shop/gaho_pouch.png",
+   "lock": true
+  },
+  {
+   "name": "가호 주머니",
+   "price": "",
+   "limit": "100",
+   "note": "문파 레벨 20 달성 시 구매 가능",
+   "img": "shop/gaho_pouch.png",
+   "lock": true
+  }
+ ]
 }
