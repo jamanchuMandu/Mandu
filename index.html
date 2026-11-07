@@ -275,6 +275,15 @@ table.mt select{padding:4px 8px;width:100%}
 }
 /* 분배표: PC는 표처럼 한 줄, 모바일은 한 사람당 두 줄 */
 .dl{overflow:hidden}
+.stat b small{font-size:12px;color:var(--muted);font-weight:500;margin-left:2px}
+.stat.tok{background:var(--t-si)}
+.stat.tok span{color:var(--t-si-fg)}
+.stat.tok b{color:var(--t-si-fg)}
+.rate{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 14px;border-radius:10px;background:var(--surface-2);font-size:13px}
+.rate .pi{width:26px;height:26px;border-radius:6px}
+.rate b{font-variant-numeric:tabular-nums}
+.rate .eq{color:var(--muted);font-weight:700}
+.rate .sub{font-size:11px;color:var(--muted);padding:1px 7px;border:1px solid var(--line);border-radius:99px}
 .dl-row{display:grid;grid-template-columns:44px minmax(0,1.6fr) minmax(0,1.6fr) 72px 120px;gap:12px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 .dl-row:nth-child(even){background:var(--row-a)}
 .dl-row:nth-child(odd):not(.dl-head){background:var(--row-b)}
@@ -288,9 +297,12 @@ table.mt select{padding:4px 8px;width:100%}
 .dl-row .sc i, .dl-row .cnt i{display:none}
 .dl-row .bar{display:block;height:8px}
 .dl-row .mini{display:block;height:8px;border-radius:99px;background:var(--accent);opacity:.75;min-width:2px}
-.dl-row .cnt{font-size:18px;font-weight:700;color:var(--accent);text-align:right}
-.dl-row .cv{text-align:right;font-weight:600}
-.dl-row .cv i{font-style:normal;font-size:12px;color:var(--muted);font-weight:500}
+.dl-row .cnt{font-size:18px;font-weight:700;color:var(--accent);display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.dl-row .pi{width:22px;height:22px;border-radius:5px}
+.dl-head .cnt .pi{display:none}
+.dl-row .cv{text-align:right;font-weight:700;color:var(--t-si-fg)}
+.dl-row .cv em{display:none;font-style:normal}
+.dl-head .cv{color:var(--muted)}
 .dl-head .cnt{font-size:12px;color:var(--muted)}
 .dl-head .cv{font-weight:600}
 .dl-row.zero .cnt, .dl-row.zero .cv{color:var(--muted)}
@@ -304,7 +316,11 @@ table.mt select{padding:4px 8px;width:100%}
   .dl-row .sc{text-align:left}
   .dl-row .sc i, .dl-row .cnt i{display:inline;font-style:normal}
   .dl-row .cnt i{font-size:12px;font-weight:500;margin-left:1px}
-  .dl-row .cv{grid-area:cv;font-size:13px}
+  .dl-row .cv{grid-area:cv;font-size:13px;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .dl-row .cv em{display:inline;font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--t-si);color:var(--t-si-fg)}
+  .dl-row .pi{width:18px;height:18px}
+  .rate{order:5;width:100%}
+  .rate .sub{display:none}
 }
 /* 문파상점 */
 .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
@@ -577,15 +593,17 @@ function renderDist(){
   const q = ($('dSearch')?.value||'').trim();
   const rows = orderedRows('dist', q), max = Math.max(1,...rows.map(r=>r.d));
   const budget = Math.floor(+S.budget||0);
-  let h = `<div class="panel toolbar"><div class="stat budget"><span>구매가능갯수</span><b>${budget}</b></div>
-    <div class="stat"><span>용맹의 증표 환산 합계</span><b>${fmtN(budget*TOKEN_RATE)}</b></div>
-    <div class="stat"><span>받는 인원</span><b>${rows.filter(r=>r.d>0).length}</b></div>
-    <div class="tb-right"><span class="hint">참석점수 비율로 분배 · 1개 = 용맹의 증표(문파자금) ${TOKEN_RATE}</span><input type="text" id="dSearch" placeholder="닉네임 검색" size="12" value="${esc(q)}"></div></div>`;
-  h += `<div class="panel dl"><div class="dl-row dl-head"><span class="rk">#</span><span class="who">닉네임</span><span class="info"><span class="sc">참석점수</span><span class="bar"></span></span><span class="cnt">분배</span><span class="cv">증표 환산</span></div>`;
+  const pouch = `<img class="pi" src="shop/gaho_pouch.png" alt="" onerror="this.remove()">`;
+  let h = `<div class="panel toolbar"><div class="stat budget"><span>가호 주머니 구매가능 갯수</span><b>${budget}<small>개</small></b></div>
+    <div class="stat tok"><span>용맹의 증표 환산 합계</span><b>${fmtN(budget*TOKEN_RATE)}</b></div>
+    <div class="stat"><span>받는 인원</span><b>${rows.filter(r=>r.d>0).length}<small>명</small></b></div>
+    <div class="rate">${pouch}<span>가호 주머니 <b>1개</b></span><span class="eq">=</span><span>용맹의 증표 <b>${TOKEN_RATE}</b></span><span class="sub">문파자금</span></div>
+    <div class="tb-right"><input type="text" id="dSearch" placeholder="닉네임 검색" size="12" value="${esc(q)}"></div></div>`;
+  h += `<div class="panel dl"><div class="dl-row dl-head"><span class="rk">#</span><span class="who">닉네임</span><span class="info"><span class="sc">참석점수</span><span class="bar"></span></span><span class="cnt">가호 주머니</span><span class="cv">용맹의 증표</span></div>`;
   rows.forEach((r,i)=> h += `<div class="dl-row${r.d?'':' zero'}"><span class="rk">${i+1}</span>`
     + `<span class="who"><b>${esc(r.m.name)}</b>${r.m.rank?rankChip(r.m.rank):''}</span>`
     + `<span class="info"><span class="sc"><i>참석 </i>${r.s}<i>점</i></span><span class="bar"><span class="mini" style="width:${r.d/max*100}%"></span></span></span>`
-    + `<span class="cnt">${r.d}<i>개</i></span><span class="cv">${fmtN(r.d*TOKEN_RATE)}<i> 증표</i></span></div>`);
+    + `<span class="cnt">${pouch}${r.d}<i>개</i></span><span class="cv"><em>용맹의 증표</em>${fmtN(r.d*TOKEN_RATE)}</span></div>`);
   h += rows.length ? '</div>' : '<div class="empty" style="margin:12px">검색 결과가 없습니다.</div></div>';
   $('v-distribution').innerHTML = h;
   $('dSearch').addEventListener('input', ()=>{ renderDist(); const n=$('dSearch'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); });
