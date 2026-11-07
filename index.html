@@ -223,6 +223,27 @@ table.mt select{padding:4px 8px;width:100%}
 .mchip.guess{background:var(--t-si);color:var(--t-si-fg)}
 .mchip.none{background:var(--warn-soft);color:var(--warn)}
 .ox{font-weight:700;letter-spacing:.15em;font-size:12px}
+/* 채널 링크: PC는 공지 옆 카드, 모바일은 오른쪽 아래 떠 있는 버튼 */
+.top-row{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;align-items:stretch}
+.top-row.single{grid-template-columns:minmax(0,1fr)}
+.top-row.single .links-card{max-width:520px}
+.links-card{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.links-card h2{margin:0;font-size:15px}
+.ch-btn{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;transition:filter .15s,transform .15s}
+.ch-btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.ch-btn svg{width:20px;height:20px;flex:none}
+.ch-btn .go{margin-left:auto;font-size:12px;font-weight:500;opacity:.85}
+.ch-discord{background:#5865F2;color:#fff}
+.ch-kakao{background:#FEE500;color:#191919}
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;display:none;flex-direction:column;gap:10px}
+.fab a{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.25);text-decoration:none}
+.fab a svg{width:24px;height:24px}
+@media (max-width:860px){
+  .top-row{grid-template-columns:minmax(0,1fr)}
+  .links-card{display:none}
+  .fab{display:flex}
+  footer{padding-bottom:150px}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:700px){
   nav.top .in{flex-wrap:wrap;height:auto;padding-block:8px;row-gap:6px}
@@ -283,6 +304,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
   <section class="view" id="v-distribution" hidden></section>
 </main>
 <footer class="in">보기 전용 페이지입니다 · 출석 기록은 문주가 관리합니다</footer>
+<nav class="fab" id="fab" aria-label="문파 채널"></nav>
 <div class="toast" id="toast" role="status"></div>
 <script>
 /* ===== 여기만 바꾸면 됩니다 ===== */
@@ -373,6 +395,19 @@ function orderedRows(sortBy, q){
   return rows;
 }
 
+/* ---------- 채널 링크 (아이콘은 공식 로고가 아닌 일반 아이콘) ---------- */
+const ICON_DISCORD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>';
+const ICON_CHAT = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.8 5.3 4.6 6.7L5.6 21l4-2.5c.8.1 1.6.2 2.4.2 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>';
+function channelLinks(){
+  const l = S.links || {}, ok = u => typeof u==='string' && /^https?:\/\//i.test(u);
+  return [{id:'discord', name:'디스코드', url:l.discord, icon:ICON_DISCORD},
+          {id:'kakao', name:'오픈채팅', url:l.kakao, icon:ICON_CHAT}].filter(x=>ok(x.url));
+}
+function renderFab(){
+  const L = channelLinks();
+  $('fab').innerHTML = L.map(x=>`<a class="ch-${x.id}" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer" aria-label="${x.name} 바로가기" title="${x.name}">${x.icon}</a>`).join('');
+}
+
 /* ---------- 홈 ---------- */
 function renderHome(){
   const evs = sortedEvents(), win = missWindow();
@@ -385,7 +420,13 @@ function renderHome(){
   const rate = heldLast.length ? Math.round(heldLast.reduce((a,e)=>a+S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length,0)/(heldLast.length*N)*100) : 0;
   let h = `<div class="hero"><span class="eyebrow">문파 출석부</span><h1>${esc(guildName())}</h1>`;
   h += `<div class="meta">집계 기간 ${evs.length?fmtDate(evs[0].date)+' ~ '+fmtDate(evs[evs.length-1].date):'-'}${UPDATED?` · 마지막 업데이트 ${UPDATED}`:''}</div></div>`;
-  if(notice()) h += `<div class="panel notice-card"><span class="ic" aria-hidden="true">📢</span><div><h2>공지사항</h2><div class="body">${esc(notice())}</div></div></div>`;
+  const L = channelLinks();
+  if(notice() || L.length){
+    h += `<div class="top-row${notice()&&L.length?'':' single'}">`;
+    if(notice()) h += `<div class="panel notice-card"><span class="ic" aria-hidden="true">📢</span><div><h2>공지사항</h2><div class="body">${esc(notice())}</div></div></div>`;
+    if(L.length) h += `<div class="panel links-card"><h2>문파 채널</h2>${L.map(x=>`<a class="ch-btn ch-${x.id}" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${x.icon}<span>${x.name}</span><span class="go">바로가기 ↗</span></a>`).join('')}</div>`;
+    h += '</div>';
+  }
   h += `<div class="tiles">
     <div class="panel tile"><span>문파원</span><b>${S.members.length}<small>명</small></b></div>
     <div class="panel tile"><span>${lastW?`Week ${lastW} 평균 참여율`:'최근 참여율'}</span><b>${rate}<small>%</small></b></div>
@@ -429,7 +470,7 @@ function renderAttendance(){
   h += `<th class="sticky c-rank" rowspan="3">직위</th><th class="sticky c-exp" rowspan="3" title="${win.grace?`유예 기간 · ${fmtDate(COUNT_FROM)}부터 집계`:`${fmtDate(win.from)} ~ ${fmtDate(win.to)} 던전 불참 ${MISS_LIMIT}회 이상이면 피만두`}">예상등급<br><small style="font-weight:400;color:var(--muted)">${win.grace?`${+COUNT_FROM.slice(5,7)}/${+COUNT_FROM.slice(8)}부터`:'최근 4주'}</small></th>`;
   weeks.forEach(w=> h += `<th class="week" colspan="${w.n}">Week ${w.w}</th>`);
   h += '</tr><tr>' + evs.map(e=>`<th class="ev ty-${e.type}${we(e.id)}">${TYPES[typeIdx(e.type)].name}</th>`).join('');
-  h += '</tr><tr>' + evs.map(e=>`<th class="${we(e.id)}">${fmtDate(e.date)}</th>`).join('') + '</tr></thead><tbody>';
+  h += '</tr><tr>' + evs.map(e=>`<th class="${we(e.id)}" data-date="${e.date}">${fmtDate(e.date)}</th>`).join('') + '</tr></thead><tbody>';
   orderedRows($('sort').value, $('search').value.trim()).forEach(({m,s})=>{
     const rk = m.rank||'', ex = expected(m, win);
     h += `<tr><td class="sticky c-dist">${distMap[m.id]}</td><td class="sticky c-score">${s}</td>`;
@@ -465,7 +506,7 @@ function renderDist(){
 function renderAll(){
   $('brand').innerHTML = `${esc(guildName())}<span>출석부</span>`;
   document.title = `${guildName()} 출석부`;
-  renderHome(); renderAttendance(); renderDist();
+  renderHome(); renderAttendance(); renderDist(); renderFab();
 }
 
 /* ---------- 라우팅 ---------- */
@@ -474,6 +515,19 @@ function route(){
   const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   VIEWS.forEach(x=>$('v-'+x).hidden = x!==v);
   document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('cur', a.dataset.v===v));
+  if(v==='attendance') requestAnimationFrame(scrollToToday);
+}
+/* 출석부를 열면 오늘과 가장 가까운 던전 열이 보이도록 가로 스크롤 (표가 화면보다 넓을 때만) */
+function scrollToToday(){
+  const wrap = document.querySelector('.grid-wrap'); if(!S || !wrap || wrap.scrollWidth <= wrap.clientWidth) return;
+  const ths = [...$('grid').querySelectorAll('thead th[data-date]')]; if(!ths.length) return;
+  const now = new Date(isoDay(new Date())+'T00:00:00');
+  const dist = th => Math.abs(new Date(th.dataset.date+'T00:00:00') - now);
+  const target = ths.reduce((b,th)=> dist(th) < dist(b) || (dist(th)===dist(b) && th.dataset.date < b.dataset.date) ? th : b);
+  // 왼쪽에 고정된 열(분배·점수·닉네임 …)이 끝나는 위치 바로 오른쪽에 오도록
+  const fixedRight = [...$('grid').querySelectorAll('thead tr:first-child th.sticky')]
+    .filter(th=>getComputedStyle(th).position==='sticky').reduce((m,th)=>Math.max(m, th.offsetLeft+th.offsetWidth), 0);
+  wrap.scrollLeft = Math.max(0, target.offsetLeft - fixedRight - 8);
 }
 window.addEventListener('hashchange', route);
 
@@ -508,7 +562,7 @@ route();
     S = Object.assign({att:{}, budget:0}, d);
     const lm = res.headers.get('last-modified');
     if(lm){ const t = new Date(lm); if(!isNaN(t)) UPDATED = `${t.getMonth()+1}월 ${t.getDate()}일`; }
-    renderAll();
+    renderAll(); route();
   }catch(e){
     $('v-home').innerHTML = `<div class="panel card"><h2>출석 데이터를 불러오지 못했습니다</h2><p class="hint" style="margin:0">저장소에 <b>data.json</b> 파일이 있는지 확인하세요. 컴퓨터에서 이 파일을 바로 열면 보안 제한 때문에 데이터가 안 보이고, GitHub Pages 주소로 열어야 보입니다.</p></div>`;
   }
