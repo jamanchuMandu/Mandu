@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>문파 출석부</title>
+<title>문파 공지 채널</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: 상단 고정 내비(홈·출석부·분배표) → 홈은 히어로+요약 카드+직위 명단, 출석부는 고정 열 가로 스크롤 그리드. 보기 전용 */
@@ -364,7 +364,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
 </head>
 <body>
 <nav class="top"><div class="in">
-  <div class="brand" id="brand">문파 출석부</div>
+  <div class="brand" id="brand">자연스럽게 만두추가 공지채널</div>
   <div class="tabs">
     <a href="#home" data-v="home">홈</a>
     <a href="#attendance" data-v="attendance">출석부</a>
@@ -474,6 +474,13 @@ function expected(m, win){
   const miss = win.evs.filter(e=>!S.att[m.id+'|'+e.id]).length;
   return {miss, pi: win.evs.length>0 && miss>=MISS_LIMIT};
 }
+/* 집계 기간: 가장 이른 일정 ~ 오늘까지 열린 일정 중 가장 늦은 날짜 (미리 넣어 둔 다음 주 일정은 제외) */
+function periodText(evs){
+  if(!evs.length) return '-';
+  const ds = evs.map(e=>e.date).sort(), today = isoDay(new Date());
+  const past = ds.filter(d=>d<=today);
+  return `${fmtDate(ds[0])} ~ ${fmtDate(past.length ? past[past.length-1] : ds[ds.length-1])}`;
+}
 function weekGroups(evs){
   const weeks=[]; evs.forEach(e=>{ const w=isoWeek(e.date), l=weeks[weeks.length-1]; if(l&&l.w===w) l.n++; else weeks.push({w,n:1}); });
   const lastOfWeek = new Set(); let k=0; weeks.forEach(w=>{ k+=w.n; lastOfWeek.add(evs[k-1].id); });
@@ -515,8 +522,8 @@ function renderHome(){
   const N = S.members.length || 1;
   const heldLast = lastEvs.filter(e=>S.members.some(m=>S.att[m.id+'|'+e.id]===1));
   const rate = heldLast.length ? Math.round(heldLast.reduce((a,e)=>a+S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length,0)/(heldLast.length*N)*100) : 0;
-  let h = `<div class="hero"><span class="eyebrow">문파 출석부</span><h1>${esc(guildName())}</h1>`;
-  h += `<div class="meta">집계 기간 ${evs.length?fmtDate(evs[0].date)+' ~ '+fmtDate(evs[evs.length-1].date):'-'}${UPDATED?` · 마지막 업데이트 ${UPDATED}`:''}</div></div>`;
+  let h = `<div class="hero"><span class="eyebrow">문파 채널</span><h1>${esc(guildName())}</h1>`;
+  h += `<div class="meta">집계 기간 ${periodText(evs)}${UPDATED?` · 마지막 업데이트 ${UPDATED}`:''}</div></div>`;
   const L = channelLinks();
   if(notice() || L.length){
     h += `<div class="top-row${notice()&&L.length?'':' single'}">`;
