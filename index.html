@@ -606,7 +606,7 @@ function renderDist(){
   const budget = Math.floor(+S.budget||0);
   const pouch = `<img class="pi" src="shop/gaho_pouch.png" alt="" onerror="this.remove()">`;
   let h = `<div class="panel toolbar"><div class="stat budget"><span>가호 주머니 구매가능 갯수</span><b>${budget}<small>개</small></b></div>
-    <div class="stat tok"><span>용맹의 증표 환산 합계</span><b>${fmtN(budget*TOKEN_RATE)}</b></div>
+    <div class="stat tok"><span>용맹의 증표 현황</span><b>${fmtN(S.tokens!=null && S.tokens!=="" ? S.tokens : budget*TOKEN_RATE)}</b></div>
     <div class="stat"><span>받는 인원</span><b>${rows.filter(r=>r.d>0).length}<small>명</small></b></div>
     <div class="rate">${pouch}<span>가호 주머니 <b>1개</b></span><span class="eq">=</span><span>용맹의 증표 <b>${TOKEN_RATE}</b></span><span class="sub">문파자금</span></div>
     <div class="tb-right"><input type="text" id="dSearch" placeholder="닉네임 검색" size="12" value="${esc(q)}"></div></div>`;
