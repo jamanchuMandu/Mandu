@@ -242,7 +242,8 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
 .notice-card{padding:16px 20px;display:flex;gap:14px;align-items:flex-start;border-left:4px solid var(--accent)}
 .notice-card .ic{font-size:20px;line-height:1.4}
 .notice-card h2{margin:0 0 4px;font-size:15px}
-.notice-card .body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;max-width:80ch}
+.notice-card > div{flex:1;min-width:0}
+.notice-card .body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
 .rd-list{display:flex;flex-direction:column;gap:10px}
 .rd{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:start}
 .rd .chip{justify-content:center}
