@@ -248,6 +248,31 @@ table.mt select{padding:4px 8px;width:100%}
   .fab{display:flex}
   footer{padding-bottom:150px}
 }
+/* 휴대폰 가로 화면: 높이가 낮으니 메뉴는 같이 스크롤, 출석표는 화면 높이만큼, 날짜 열을 더 많이 */
+@media (orientation:landscape) and (max-height:520px){
+  nav.top{position:static}
+  nav.top .in{height:auto;padding-block:6px;flex-wrap:nowrap}
+  .tabs{margin-left:auto;order:0;width:auto}
+  .tools{margin-left:0}
+  main{padding-block:10px 30px}
+  .view{gap:10px}
+  .hero{padding:14px 18px;gap:4px}
+  .hero h1{font-size:22px}
+  .tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .tile{padding:8px 12px}
+  .tile b{font-size:20px}
+  .toolbar{padding:8px 10px;gap:8px}
+  .stat{padding:4px 10px;min-width:80px}
+  .stat b{font-size:16px}
+  .grid-wrap{max-height:calc(100dvh - 16px)}
+  .c-rank,.c-exp{position:static!important}
+  .c-name{width:110px;min-width:110px}
+  table.g th,table.g td{height:30px}
+  .fab{gap:8px}
+  .fab a{width:44px;height:44px}
+  .fab a .ic-wrap img{width:44px;height:44px}
+  footer{padding-bottom:30px}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:700px){
   nav.top .in{flex-wrap:wrap;height:auto;padding-block:8px;row-gap:6px}
