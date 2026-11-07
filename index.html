@@ -167,6 +167,8 @@ td.cell.on .dot{background:var(--on)}
 td.cell.on .dot::after{content:"O";color:var(--on-fg);opacity:1;font-weight:700}
 td.cell.tri .dot{background:var(--t-si);border:1.5px dashed var(--t-si-fg)}
 td.cell.tri .dot::after{content:"△";color:var(--t-si-fg);opacity:1;font-weight:700}
+td.cell.pre .dot::after{content:"–";opacity:.5}
+td.c-name .jd{font-size:10px;font-weight:600;color:var(--t-mi-fg);background:var(--t-mi);border-radius:99px;padding:1px 6px;white-space:nowrap}
 .tri-n{color:var(--t-si-fg)}
 table.g tbody tr:nth-child(odd) td{background-color:var(--row-a)}
 table.g tbody tr:nth-child(even) td{background-color:var(--row-b)}
@@ -390,7 +392,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
       </div>
     </div>
     <div class="panel"><div class="grid-wrap"><table class="g" id="grid"></table></div></div>
-    <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · 예상등급: 최근 4주 던전 불참 4회 이상이면 피만두</p>
+    <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · – 가입 전 · 예상등급: 최근 4주 던전 불참 4회 이상이면 피만두 (신규 문파원은 가입일 이후만)</p>
   </section>
   <section class="view" id="v-distribution" hidden></section>
   <section class="view" id="v-shop" hidden></section>
@@ -471,8 +473,10 @@ function missWindow(){
           evs: grace ? [] : S.events.filter(e=>e.date>=start && e.date<=to && held(e))};
 }
 function expected(m, win){
-  const miss = win.evs.filter(e=>!S.att[m.id+'|'+e.id]).length;
-  return {miss, pi: win.evs.length>0 && miss>=MISS_LIMIT};
+  // 가입일(joined)이 있으면 가입일 이후에 열린 던전만 셈 (신규 문파원 보호)
+  const evs = m.joined ? win.evs.filter(e=>e.date >= m.joined) : win.evs;
+  const miss = evs.filter(e=>!S.att[m.id+'|'+e.id]).length;
+  return {miss, n:evs.length, pi: evs.length>0 && miss>=MISS_LIMIT};
 }
 /* 집계 기간: 가장 이른 일정 ~ 오늘까지 열린 일정 중 가장 늦은 날짜 (미리 넣어 둔 다음 주 일정은 제외) */
 function periodText(evs){
@@ -546,7 +550,7 @@ function renderHome(){
     }).join('') + '</div>';
   } else h += '<div class="empty">아직 등록된 일정이 없습니다.</div>';
   h += `</div><div class="panel card"><h2>최근 4주 피만두 예상<small>${win.grace?`유예 기간 · ${fmtDate(COUNT_FROM)}부터 집계`:`${win.range} · 던전 불참 ${MISS_LIMIT}회 이상 · 열린 던전 ${win.evs.length}개`}</small></h2>`;
-  h += pis.length ? '<div class="pi-list">' + pis.map(x=>`<div class="pi-item"><span>${esc(x.m.name)} ${x.m.rank?rankChip(x.m.rank):''}</span><b>불참 ${x.miss}/${win.evs.length}</b></div>`).join('') + '</div>'
+  h += pis.length ? '<div class="pi-list">' + pis.map(x=>`<div class="pi-item"><span>${esc(x.m.name)} ${x.m.rank?rankChip(x.m.rank):''}</span><b>불참 ${x.miss}/${x.n}</b></div>`).join('') + '</div>'
                   : `<div class="empty">${win.grace?`지금은 유예 기간이라 피만두 판정을 하지 않습니다. ${fmtDate(COUNT_FROM)}부터 열린 던전을 기준으로 집계합니다.`:win.evs.length<MISS_LIMIT?`집계 기간에 던전이 ${win.evs.length}개 열려 아직 해당자가 없습니다.`:'해당자가 없습니다. 모두 잘하고 있어요.'}</div>`;
   h += `</div></div>`;
   const groups = RANKS.map(r=>({r, ms:S.members.filter(m=>m.rank===r)})).filter(g=>g.ms.length);
@@ -578,10 +582,10 @@ function renderAttendance(){
   orderedRows($('sort').value, $('search').value.trim()).forEach(({m,s})=>{
     const rk = m.rank||'', ex = expected(m, win);
     h += `<tr><td class="sticky c-dist">${distMap[m.id]}</td><td class="sticky c-score">${s}</td>`;
-    h += `<td class="sticky c-name"><div class="nm"><span>${esc(m.name)}</span></div></td>`;
+    h += `<td class="sticky c-name"><div class="nm"><span>${esc(m.name)}</span>${m.joined&&m.joined>=sortedEvents()[0]?.date?`<span class="jd" title="가입일">${+m.joined.slice(5,7)}/${+m.joined.slice(8)} 가입</span>`:''}</div></td>`;
     h += `<td class="sticky c-rank">${rankChip(rk)}</td>`;
-    h += `<td class="sticky c-exp">${ex.pi?`<span class="gr warn">${PI_RANK}</span>`:`<span class="gr keep">${esc(rk||'유지')}</span>`}<small>${win.grace?'유예 기간':`불참 ${ex.miss}/${win.evs.length}`}</small></td>`;
-    evs.forEach(e=>{ const v=S.att[m.id+'|'+e.id]; h += `<td class="cell${v===1?' on':v===2?' tri':''}${we(e.id)}"><span class="dot"></span></td>`; });
+    h += `<td class="sticky c-exp">${ex.pi?`<span class="gr warn">${PI_RANK}</span>`:`<span class="gr keep">${esc(rk||'유지')}</span>`}<small>${win.grace?'유예 기간':`불참 ${ex.miss}/${ex.n}`}</small></td>`;
+    evs.forEach(e=>{ const v=S.att[m.id+'|'+e.id]; h += `<td class="cell${v===1?' on':v===2?' tri':(m.joined&&e.date<m.joined?' pre':'')}${we(e.id)}"><span class="dot"></span></td>`; });
     h += '</tr>';
   });
   const piN = S.members.filter(m=>expected(m,win).pi).length;
