@@ -731,9 +731,6 @@
    "lock": true
   }
  ],
- "hiddenWeeks": [
-  "2026-11-09"
- ],
  "tokens": 35648,
  "popup": {
   "on": true,
