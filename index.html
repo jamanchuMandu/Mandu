@@ -376,7 +376,31 @@ table.mt select{padding:4px 8px;width:100%}
 .bus-a .ride{flex:1;justify-content:center;padding:10px 12px;font-size:14px;font-weight:700}
 .bus-a .ride.off{background:var(--surface-2);color:var(--fg);border-color:var(--line)}
 .bus-a .del{background:transparent;color:var(--muted)}
+button.seat{display:block;width:100%;cursor:pointer;font:600 13px var(--font);justify-content:center}
+.seat i{display:block;font-style:normal;font-size:10px;font-weight:700;opacity:.8;margin-bottom:1px}
+.seat.dseat{border-color:var(--r0f);color:var(--r0f)}
+.seat.dseat.f{background:var(--r0);color:var(--r0f);border-color:transparent}
+.seat.dseat.f.me{background:var(--r0f);color:#fff}
+.seat:not(.dseat) i{display:none}
+.seats .seat{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.seats .seat{max-width:100%}
+button.seat:not(.f):hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.seat.me:hover{filter:brightness(1.05)}
+.drv-badge{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--r0);color:var(--r0f)}
+.drv-badge.me{background:var(--accent);color:#fff}
+.bus-drv b{font-size:15px}
+.btn-x{padding:4px 10px;font-size:12px}
+.modal.sheet{width:min(380px,100%)}
+.sheet .m-body{gap:10px}
+.pick{display:grid;grid-template-columns:36px 1fr;grid-template-rows:auto auto;column-gap:10px;text-align:left;padding:12px 14px;border-radius:12px;width:100%}
+.pick span{grid-row:1/3;font-size:24px;align-self:center}
+.pick b{font-size:15px}
+.pick small{color:var(--muted);font-size:12px}
+.pick.drv:not(:disabled){border-color:var(--r0f)}
+.pick:disabled{opacity:.45;cursor:not-allowed}
+.pick-cancel{justify-content:center;background:transparent;color:var(--muted)}
 .bus-empty{grid-column:1/-1}
+.bus-gone{font-size:12px;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:8px;padding:6px 10px}
 /* 팝업 공지 */
 .modal.pop{width:min(480px,100%)}
 .pop-body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -452,7 +476,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
       <div class="bf-row"><span class="bf-l">종류</span>
         <div class="seg" id="bfMode"><button data-v="drive" class="on">🚌 내가 기사</button><button data-v="need">🙋 기사 구해요</button></div></div>
       <div class="bf-row"><span class="bf-l">출발</span><input type="date" id="bfDate"><input type="time" id="bfTime" step="300"></div>
-      <div class="bf-row"><span class="bf-l">승객 자리</span><div class="stepper"><button id="bfMinus" aria-label="자리 줄이기">−</button><b id="bfSeats">4</b><button id="bfPlus" aria-label="자리 늘리기">＋</button></div></div>
+      <div class="bf-row"><span class="bf-l">인원</span><span class="hint" style="font-size:13px">기사 1명 + 승객 3명 = 총 4명</span></div>
       <div class="bf-row"><span class="bf-l">메모</span><input type="text" id="bfMemo" maxlength="40" placeholder="선택 · 예) 초보 환영, 보이스 가능"></div>
       <div class="bf-foot"><button id="bfCancel">취소</button><button class="primary" id="bfCreate">버스 출발 등록</button></div>
     </div>
@@ -776,7 +800,8 @@ const FIREBASE_CONFIG = {
 const FB_VER = '10.12.2';
 const BUS_DUNGEON = {id:'ss', name:'산신마루'};   // 버스 던전은 하나
 const BUS_KEEP_H = 2;   // 출발 후 몇 시간까지 보일지
-let BUS = {started:false, db:null, uid:null, list:[], unsub:null, mode:'drive', seats:4};
+const BUS_PASSENGERS = 3;   // 총 4명 = 기사 1 + 승객 3
+let BUS = {started:false, db:null, uid:null, list:[], unsub:null, mode:'drive', seats:BUS_PASSENGERS};
 const meGet = ()=>{ try{ return localStorage.getItem('guild-me')||''; }catch(e){ return ''; } };
 const meSet = v=>{ try{ localStorage.setItem('guild-me', v); }catch(e){} };
 function loadScript(src){ return new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>no(new Error('load')); document.head.appendChild(s); }); }
@@ -814,7 +839,9 @@ async function busOpen(){
 }
 function cleanupBuses(){   // 출발 시간이 한참 지난 버스는 보는 사람이 대신 정리 (규칙에서 허용)
   const lim = Date.now() - BUS_KEEP_H*3600e3;
-  BUS.list.filter(b=>b.time && b.time.toDate() < new Date(lim)).forEach(b=>BUS.db.collection('buses').doc(b.id).delete().catch(()=>{}));
+  const now = Date.now();
+  BUS.list.filter(b=>(b.time && b.time.toDate() < new Date(lim)) || (b.emptyAt && !b.driver && !(b.riders||[]).length && b.emptyAt.toDate().getTime() + EMPTY_WAIT_MS < now))
+    .forEach(b=>BUS.db.collection('buses').doc(b.id).delete().catch(()=>{}));
 }
 const KDAY = ['일','월','화','수','목','금','토'];
 function fmtWhen(d){ return `${d.getMonth()+1}/${d.getDate()}(${KDAY[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
@@ -831,35 +858,82 @@ function renderBuses(){
   if(!list.length){ $('busList').innerHTML = `<div class="panel card bus-empty"><div class="empty">아직 운행 중인 버스가 없어요. <b>＋ 산신마루 버스 만들기</b>로 첫 버스를 띄워 보세요!</div></div>`; return; }
   $('busList').innerHTML = list.map(b=>{
     const d = b.time.toDate(), riders = b.riders||[], full = riders.length >= b.seats, on = me && riders.includes(me);
-    const seats = Array.from({length:b.seats},(_,i)=> riders[i] ? `<div class="seat f${riders[i]===me?' me':''}" title="${esc(riders[i])}">${esc(riders[i])}</div>` : '<div class="seat">빈자리</div>').join('');
-    const drv = b.driver ? `🚌 기사 <b>${esc(b.driver)}</b>${b.driver===me && b.owner!==BUS.uid?` <button class="btn-x" data-undrive="${b.id}">운전 취소</button>`:''}`
+    const total = b.seats + 1, cnt = riders.length + (b.driver?1:0);
+    const dseat = b.driver ? (b.driver===me ? `<button class="seat dseat f me" data-undrive="${b.id}" title="눌러서 기사에서 내리기"><i>기사</i>${esc(b.driver)}</button>` : `<div class="seat dseat f" title="${esc(b.driver)}"><i>기사</i>${esc(b.driver)}</div>`)
+                           : `<button class="seat dseat" data-drive="${b.id}" title="눌러서 기사로 탑승"><i>기사</i>빈자리</button>`;
+    const seats = dseat + Array.from({length:b.seats},(_,i)=> riders[i]
+        ? (riders[i]===me ? `<button class="seat f me" data-leave="${b.id}" title="눌러서 하차">${esc(riders[i])}</button>` : `<div class="seat f" title="${esc(riders[i])}">${esc(riders[i])}</div>`)
+        : `<button class="seat" data-seat="${b.id}" title="눌러서 탑승">빈자리</button>`).join('');
+    const drv = b.driver ? `<span class="drv-badge${b.driver===me?' me':''}">🚌 기사</span><b>${esc(b.driver)}</b>${b.driver===me?` <button class="btn-x" data-undrive="${b.id}">운전 그만</button>`:''}`
                          : `<span class="need">🙋 기사 구하는 중</span> <button class="primary" data-drive="${b.id}">운전할게요</button>`;
     const ride = on ? `<button class="ride off" data-ride="${b.id}">하차하기</button>`
-               : full ? `<button class="ride" disabled>만석</button>` : `<button class="ride primary" data-ride="${b.id}">탑승 (${riders.length}/${b.seats})</button>`;
+               : full ? `<button class="ride" disabled>${b.driver?'만석':'승객 만석 · 기사 구하는 중'}</button>` : `<button class="ride primary" data-ride="${b.id}">승객으로 탑승 (${cnt}/${total})</button>`;
     return `<div class="panel bus${full?' full':''}"><div class="bus-h"><span class="dg" style="${dgStyle(b.dungeon)}">${esc(b.title)}</span><span class="when">${fmtWhen(d)}</span><span class="rel">${relTime(d)}</span></div>
+      ${(!b.driver && !riders.length && b.emptyAt) ? `<div class="bus-gone">⏳ 아무도 없어서 곧 사라져요${b.emptyAt.toDate?` (${Math.max(0,Math.ceil((b.emptyAt.toDate().getTime()+EMPTY_WAIT_MS-Date.now())/1000))}초)`:''}</div>` : ''}
       <div class="bus-drv">${drv}</div><div class="seats">${seats}</div>${b.memo?`<div class="bus-memo">💬 ${esc(b.memo)}</div>`:''}
       <div class="bus-a">${ride}${b.owner===BUS.uid?`<button class="del" data-del="${b.id}" title="버스 삭제">삭제</button>`:''}</div></div>`;
   }).join('');
 }
 function needMe(){ const me = meGet(); if(!me){ toast('먼저 위에서 내 닉네임을 골라 주세요'); $('meSel').focus(); } return me; }
 const FV = ()=>firebase.firestore.FieldValue;
+/* 자리 바꾸기는 트랜잭션으로 (동시에 눌러도 서로 덮어쓰지 않게).
+   아무도 안 남으면 emptyAt을 기록 → 1분 뒤 누구 화면에서든 자동 삭제 */
+const EMPTY_WAIT_MS = 60e3;
+async function mutateBus(id, fn){
+  const ref = BUS.db.collection('buses').doc(id);
+  return BUS.db.runTransaction(async tx=>{
+    const snap = await tx.get(ref); if(!snap.exists) throw {msg:'이미 사라진 버스예요'};
+    const d = snap.data(); const r = fn({riders:[...(d.riders||[])], driver:d.driver||'', seats:d.seats});
+    if(!r) return null;
+    const patch = {riders:r.riders, driver:r.driver};
+    if(!r.driver && !r.riders.length) patch.emptyAt = firebase.firestore.FieldValue.serverTimestamp();
+    else if(d.emptyAt) patch.emptyAt = null;
+    tx.update(ref, patch); return r.msg;
+  });
+}
 $('busList').addEventListener('click', async e=>{
   const b = e.target.closest('button'); if(!b || !BUS.db) return;
-  const id = b.dataset.ride||b.dataset.drive||b.dataset.undrive||b.dataset.del; if(!id) return;
-  const ref = BUS.db.collection('buses').doc(id), bus = BUS.list.find(x=>x.id===id);
+  const id = b.dataset.ride||b.dataset.drive||b.dataset.undrive||b.dataset.del||b.dataset.seat||b.dataset.leave; if(!id) return;
+  const bus = BUS.list.find(x=>x.id===id); if(!bus) return;
   try{
-    if(b.dataset.del!==undefined){ if(await busAsk('이 버스를 삭제할까요?')) { await ref.delete(); toast('버스를 삭제했어요'); } return; }
+    if(b.dataset.del!==undefined){ if(await busAsk('이 버스를 삭제할까요?')) { await BUS.db.collection('buses').doc(id).delete(); toast('버스를 삭제했어요'); } return; }
     const me = needMe(); if(!me) return;
-    if(b.dataset.ride!==undefined){
-      if((bus.riders||[]).includes(me)){ await ref.update({riders:FV().arrayRemove(me)}); toast('하차했어요'); }
-      else { if(bus.driver===me) return toast('기사님은 이미 버스에 있어요'); await ref.update({riders:FV().arrayUnion(me)}); toast('탑승 완료! 🚌'); }
-    } else if(b.dataset.drive!==undefined){
-      if(bus.driver) return toast('이미 기사님이 있어요');
-      const r = (bus.riders||[]).filter(x=>x!==me);
-      await ref.update({driver:me, riders:r}); toast('기사님 감사합니다! 🙇');
-    } else if(b.dataset.undrive!==undefined){ await ref.update({driver:''}); toast('운전을 취소했어요'); }
-  }catch(err){ if(/permission/.test(err.code||'')) toast('자리가 꽉 찼거나 권한이 없어요'); else busErr(err); }
+    let pick = null;
+    if(b.dataset.seat!==undefined){ pick = await seatSheet(bus, me); if(!pick) return; }
+    const msg = await mutateBus(id, s=>{
+      const on = s.riders.includes(me), full = s.riders.length >= s.seats;
+      const asDriver = ()=>{ if(s.driver && s.driver!==me) throw {msg:'이미 기사님이 있어요'}; return {driver:me, riders:s.riders.filter(x=>x!==me), msg:'기사로 탑승했어요! 🚌'}; };
+      const asRider = ()=>{ if(on) throw {msg:'이미 탑승 중이에요'}; if(full) throw {msg:'자리가 꽉 찼어요'};
+                            return {driver:s.driver===me?'':s.driver, riders:[...s.riders, me], msg:'승객으로 탑승했어요! 🙋'}; };
+      if(b.dataset.leave!==undefined) return {driver:s.driver, riders:s.riders.filter(x=>x!==me), msg:'하차했어요'};
+      if(pick==='driver' || b.dataset.drive!==undefined) return asDriver();
+      if(pick==='rider') return asRider();
+      if(b.dataset.ride!==undefined){
+        if(on) return {driver:s.driver, riders:s.riders.filter(x=>x!==me), msg:'하차했어요'};
+        if(s.driver===me) throw {msg:'기사님은 이미 버스에 있어요'};
+        return asRider();
+      }
+      if(b.dataset.undrive!==undefined) return {driver:'', riders:s.riders, msg:'기사에서 내렸어요'};
+      return null;
+    });
+    if(msg) toast(msg);
+  }catch(err){
+    if(err && err.msg) toast(err.msg);
+    else if(/permission/.test((err&&err.code)||'')) toast('자리가 꽉 찼거나 권한이 없어요');
+    else busErr(err);
+  }
 });
+// 빈자리를 누르면: 기사로 / 승객으로 선택
+function seatSheet(bus, me){ return new Promise(res=>{
+  const riders = bus.riders||[], hasDrv = bus.driver && bus.driver!==me, amDrv = bus.driver===me, full = riders.length >= bus.seats;
+  const o = document.createElement('div'); o.className='overlay';
+  o.innerHTML = `<div class="modal panel sheet"><div class="m-head"><h2>${esc(me)}님, 어떻게 탈까요?</h2></div><div class="m-body">
+    <button class="pick drv" data-p="driver"${hasDrv?' disabled':''}><span>🚌</span><b>기사로 탑승</b><small>${hasDrv?`이미 기사 ${esc(bus.driver)}님이 있어요`:amDrv?'지금 기사예요':'운전해서 승객을 태워요'}</small></button>
+    <button class="pick" data-p="rider"${(full||riders.includes(me))?' disabled':''}><span>🙋</span><b>승객으로 탑승</b><small>${riders.includes(me)?'이미 탑승 중이에요':full?'자리가 꽉 찼어요':amDrv?'기사에서 내려 승객으로 타요':'빈자리에 앉아요'}</small></button>
+    <button class="pick-cancel" data-p="">취소</button></div></div>`;
+  document.body.appendChild(o);
+  o.onclick = e=>{ const t=e.target.closest('[data-p]'); if(t && !t.disabled){ o.remove(); res(t.dataset.p||null); } else if(e.target===o){ o.remove(); res(null); } };
+}); }
 function busAsk(msg){ return new Promise(res=>{ const o=document.createElement('div'); o.className='overlay';
   o.innerHTML=`<div class="modal panel" style="width:min(360px,100%)"><div class="m-body"><p style="margin:0">${esc(msg)}</p></div><div class="pop-foot"><button data-n>취소</button><button class="primary" data-y>삭제</button></div></div>`;
   document.body.appendChild(o); o.onclick=e=>{ if(e.target.dataset.y!==undefined){o.remove();res(true);} else if(e.target.dataset.n!==undefined||e.target===o){o.remove();res(false);} }; }); }
@@ -868,8 +942,6 @@ $('meSel').addEventListener('change', e=>{ if(e.target.value){ meSet(e.target.va
 // 버스 만들기 폼
 function segPick(box, key, cb){ $(box).addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; $(box).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); BUS[key]=b.dataset.v; cb&&cb(); }); }
 segPick('bfMode','mode');
-$('bfMinus').onclick = ()=>{ BUS.seats=Math.max(1,BUS.seats-1); $('bfSeats').textContent=BUS.seats; };
-$('bfPlus').onclick = ()=>{ BUS.seats=Math.min(8,BUS.seats+1); $('bfSeats').textContent=BUS.seats; };
 $('btnNewBus').addEventListener('click', ()=>{
   if(!needMe()) return;
   const d = new Date(Date.now()+30*60e3); d.setMinutes(Math.ceil(d.getMinutes()/10)*10,0,0);
@@ -895,7 +967,7 @@ $('bfCreate').addEventListener('click', async ()=>{
   }catch(err){ busErr(err); }
   b.disabled = false;
 });
-setInterval(()=>{ if(!$('v-bus').hidden && BUS.list.length) renderBuses(); }, 60000);   // "n분 후" 갱신
+setInterval(()=>{ if(!$('v-bus').hidden && BUS.list.length){ renderBuses(); cleanupBuses(); } }, 10000);   // 남은 시간 갱신 + 빈 버스 정리
 
 /* ---------- 팝업 공지 (오늘 하루 보지 않기는 이 기기에만 기억) ---------- */
 function showPopup(){
