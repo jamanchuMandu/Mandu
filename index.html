@@ -339,6 +339,40 @@ table.mt select{padding:4px 8px;width:100%}
 /* 문파 소개 영상 (세로 영상) */
 .video-card .vwrap{display:flex;justify-content:center}
 .video-card video{width:100%;max-width:380px;max-height:78vh;aspect-ratio:9/16;border-radius:14px;background:#000;display:block}
+/* 버스 정류장 */
+.bus-top{align-items:center}
+.me-box{display:flex;align-items:center;gap:10px}
+.me-box b{font-size:16px}
+.me-box select{max-width:160px}
+.bus-form{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.bf-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bf-l{width:72px;font-size:13px;color:var(--muted);font-weight:600}
+.seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+.seg button{border-radius:99px;padding:7px 14px}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stepper{display:inline-flex;align-items:center;gap:6px}
+.stepper button{width:38px;justify-content:center;font-size:16px;padding:6px 0}
+.stepper b{min-width:28px;text-align:center;font-size:18px;font-variant-numeric:tabular-nums}
+.bf-foot{display:flex;justify-content:flex-end;gap:8px}
+.bus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.bus{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.bus.full{opacity:.85}
+.bus-h{display:flex;align-items:center;gap:8px;min-width:0}
+.bus-h .dg{font-size:13px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap}
+.bus-h .when{font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.bus-h .rel{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.bus-drv{display:flex;align-items:center;gap:8px;font-size:14px}
+.bus-drv .need{color:var(--warn);font-weight:700}
+.seats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.seat{border-radius:10px;padding:8px 6px;text-align:center;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--muted);border:1px dashed var(--line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat.f{background:var(--accent-soft);color:var(--accent);border-style:solid;border-color:transparent}
+.seat.me{background:var(--accent);color:#fff}
+.bus-memo{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.bus-a{display:flex;gap:8px;align-items:center}
+.bus-a .ride{flex:1;justify-content:center;padding:10px 12px;font-size:14px;font-weight:700}
+.bus-a .ride.off{background:var(--surface-2);color:var(--fg);border-color:var(--line)}
+.bus-a .del{background:transparent;color:var(--muted)}
+.bus-empty{grid-column:1/-1}
 /* 팝업 공지 */
 .modal.pop{width:min(480px,100%)}
 .pop-body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -380,6 +414,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
     <a href="#attendance" data-v="attendance">출석부</a>
     <a href="#distribution" data-v="distribution">분배표</a>
     <a href="#shop" data-v="shop">문파상점</a>
+    <a href="#bus" data-v="bus">🚌 버스</a>
   </div>
   <div class="tools"><button id="btnTheme" title="테마 전환" aria-label="테마 전환">◐</button></div>
 </div></nav>
@@ -404,6 +439,25 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
   </section>
   <section class="view" id="v-distribution" hidden></section>
   <section class="view" id="v-shop" hidden></section>
+  <section class="view" id="v-bus" hidden>
+    <div class="panel toolbar bus-top">
+      <div class="me-box"><span class="hint">나</span><b id="meName">닉네임 선택</b><select id="meSel" aria-label="내 닉네임"></select></div>
+      <div class="tb-right"><button class="primary" id="btnNewBus">＋ 버스 만들기</button></div>
+    </div>
+    <div class="panel bus-form" id="busForm" hidden>
+      <div class="bf-row"><span class="bf-l">종류</span>
+        <div class="seg" id="bfMode"><button data-v="drive" class="on">🚌 내가 기사</button><button data-v="need">🙋 기사 구해요</button></div></div>
+      <div class="bf-row"><span class="bf-l">던전</span><div class="seg wrap" id="bfDungeon"></div>
+        <input type="text" id="bfEtc" placeholder="던전 이름" maxlength="20" hidden></div>
+      <div class="bf-row"><span class="bf-l">출발</span><input type="date" id="bfDate"><input type="time" id="bfTime" step="300"></div>
+      <div class="bf-row"><span class="bf-l">승객 자리</span><div class="stepper"><button id="bfMinus" aria-label="자리 줄이기">−</button><b id="bfSeats">4</b><button id="bfPlus" aria-label="자리 늘리기">＋</button></div></div>
+      <div class="bf-row"><span class="bf-l">메모</span><input type="text" id="bfMemo" maxlength="40" placeholder="선택 · 예) 초보 환영, 보이스 가능"></div>
+      <div class="bf-foot"><button id="bfCancel">취소</button><button class="primary" id="bfCreate">버스 출발 등록</button></div>
+    </div>
+    <div id="busStatus" class="hint" style="margin:0"></div>
+    <div class="bus-grid" id="busList"></div>
+    <p class="hint" style="margin:0">카드의 <b>탑승</b>을 누르면 자리가 잡히고, 다시 누르면 하차해요 · 출발 2시간 뒤 자동으로 사라져요 · 버스는 만든 사람만 지울 수 있어요</p>
+  </section>
 </main>
 <footer class="in">보기 전용 페이지입니다 · 출석 기록은 문주가 관리합니다</footer>
 <nav class="fab" id="fab" aria-label="문파 채널"></nav>
@@ -665,12 +719,13 @@ function renderAll(){
 }
 
 /* ---------- 라우팅 ---------- */
-const VIEWS = ['home','attendance','distribution','shop'];
+const VIEWS = ['home','attendance','distribution','shop','bus'];
 function route(){
   const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   VIEWS.forEach(x=>$('v-'+x).hidden = x!==v);
   document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('cur', a.dataset.v===v));
   if(v==='attendance') requestAnimationFrame(scrollToToday);
+  if(v==='bus' && S) busOpen();   // 데이터를 불러온 뒤에 연결
 }
 /* 출석부를 열면 오늘과 가장 가까운 던전 열이 보이도록 가로 스크롤 (표가 화면보다 넓을 때만) */
 function scrollToToday(){
@@ -706,6 +761,141 @@ $('btnTheme').addEventListener('click', ()=>{
 });
 try{ const t=localStorage.getItem('guild-theme'); if(t) document.documentElement.dataset.theme=t; }catch(e){}
 route();
+
+/* ---------- 버스 정류장 (Firebase: 무료 Spark 요금제, 버스 탭을 열 때만 연결) ---------- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD7P1GaXi1g_l6AvQJAwg95oKTLuy0Ikr4",
+  authDomain: "jamanchu-bus.firebaseapp.com",
+  projectId: "jamanchu-bus",
+  storageBucket: "jamanchu-bus.firebasestorage.app",
+  messagingSenderId: "119494543447",
+  appId: "1:119494543447:web:a22862f8fc4dbff3f2fb12"
+};
+const FB_VER = '10.12.2';
+const BUS_DUNGEONS = [{id:'yo',name:'요신 토벌령'},{id:'gy',name:'결계지 방어'},{id:'mi',name:'미혹의 정원'},{id:'si',name:'신기 쟁탈전'},{id:'etc',name:'기타'}];
+const BUS_KEEP_H = 2;   // 출발 후 몇 시간까지 보일지
+let BUS = {started:false, db:null, uid:null, list:[], unsub:null, mode:'drive', dungeon:'yo', seats:4};
+const meGet = ()=>{ try{ return localStorage.getItem('guild-me')||''; }catch(e){ return ''; } };
+const meSet = v=>{ try{ localStorage.setItem('guild-me', v); }catch(e){} };
+function loadScript(src){ return new Promise((ok,no)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>no(new Error('load')); document.head.appendChild(s); }); }
+function busMsg(t){ $('busStatus').textContent = t||''; }
+function busErr(e){
+  const c = e && (e.code||e.message||'');
+  if(/operation-not-allowed|admin-restricted/.test(c)) return busMsg('Firebase에서 익명 로그인이 꺼져 있어요. (Authentication → 로그인 방법 → 익명)');
+  if(/permission-denied/.test(c)) return busMsg('저장 권한이 없어요. Firestore 규칙을 확인해 주세요.');
+  if(/load/.test(c)) return busMsg('버스 정보를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.');
+  busMsg('오류: '+c);
+}
+function renderMe(){
+  const me = meGet(), names = (S? S.members.map(m=>m.name) : []).slice().sort((a,b)=>a.localeCompare(b,'ko'));
+  $('meSel').innerHTML = `<option value="">${me?'닉네임 변경':'닉네임 선택'}</option>` + names.map(n=>`<option${n===me?' selected':''}>${esc(n)}</option>`).join('');
+  $('meName').textContent = me || '닉네임을 골라 주세요';
+  $('meName').style.color = me ? '' : 'var(--warn)';
+}
+async function busOpen(){
+  renderMe();
+  if(BUS.started) return; BUS.started = true;
+  busMsg('버스 정보를 불러오는 중…');
+  try{
+    if(!window.firebase){
+      await loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app-compat.js`);
+      await Promise.all([loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-auth-compat.js`), loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-firestore-compat.js`)]);
+    }
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    const cred = await firebase.auth().signInAnonymously(); BUS.uid = cred.user.uid;
+    BUS.db = firebase.firestore();
+    const cutoff = new Date(Date.now() - 24*3600e3);
+    BUS.unsub = BUS.db.collection('buses').where('time','>=',cutoff).orderBy('time').onSnapshot(snap=>{
+      BUS.list = snap.docs.map(d=>({id:d.id, ...d.data()})); busMsg(''); renderBuses(); cleanupBuses();
+    }, busErr);
+  }catch(e){ BUS.started = false; busErr(e); }
+}
+function cleanupBuses(){   // 출발 시간이 한참 지난 버스는 보는 사람이 대신 정리 (규칙에서 허용)
+  const lim = Date.now() - BUS_KEEP_H*3600e3;
+  BUS.list.filter(b=>b.time && b.time.toDate() < new Date(lim)).forEach(b=>BUS.db.collection('buses').doc(b.id).delete().catch(()=>{}));
+}
+const KDAY = ['일','월','화','수','목','금','토'];
+function fmtWhen(d){ return `${d.getMonth()+1}/${d.getDate()}(${KDAY[d.getDay()]}) ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function relTime(d){
+  const m = Math.round((d - Date.now())/60000);
+  if(m < -1) return '출발함'; if(m <= 1) return '곧 출발';
+  if(m < 60) return `${m}분 후`; const h = Math.floor(m/60);
+  if(h < 24) return `${h}시간 ${m%60?m%60+'분 ':''}후`; return `${Math.floor(h/24)}일 후`;
+}
+function dgStyle(id){ return id==='etc' ? 'background:var(--accent-soft);color:var(--accent)' : `background:var(--t-${id});color:var(--t-${id}-fg)`; }
+function renderBuses(){
+  const me = meGet(), lim = Date.now() - BUS_KEEP_H*3600e3;
+  const list = BUS.list.filter(b=>b.time && b.time.toDate() >= new Date(lim));
+  if(!list.length){ $('busList').innerHTML = `<div class="panel card bus-empty"><div class="empty">아직 운행 중인 버스가 없어요. <b>＋ 버스 만들기</b>로 첫 버스를 띄워 보세요!</div></div>`; return; }
+  $('busList').innerHTML = list.map(b=>{
+    const d = b.time.toDate(), riders = b.riders||[], full = riders.length >= b.seats, on = me && riders.includes(me);
+    const seats = Array.from({length:b.seats},(_,i)=> riders[i] ? `<div class="seat f${riders[i]===me?' me':''}" title="${esc(riders[i])}">${esc(riders[i])}</div>` : '<div class="seat">빈자리</div>').join('');
+    const drv = b.driver ? `🚌 기사 <b>${esc(b.driver)}</b>${b.driver===me && b.owner!==BUS.uid?` <button class="btn-x" data-undrive="${b.id}">운전 취소</button>`:''}`
+                         : `<span class="need">🙋 기사 구하는 중</span> <button class="primary" data-drive="${b.id}">운전할게요</button>`;
+    const ride = on ? `<button class="ride off" data-ride="${b.id}">하차하기</button>`
+               : full ? `<button class="ride" disabled>만석</button>` : `<button class="ride primary" data-ride="${b.id}">탑승 (${riders.length}/${b.seats})</button>`;
+    return `<div class="panel bus${full?' full':''}"><div class="bus-h"><span class="dg" style="${dgStyle(b.dungeon)}">${esc(b.title)}</span><span class="when">${fmtWhen(d)}</span><span class="rel">${relTime(d)}</span></div>
+      <div class="bus-drv">${drv}</div><div class="seats">${seats}</div>${b.memo?`<div class="bus-memo">💬 ${esc(b.memo)}</div>`:''}
+      <div class="bus-a">${ride}${b.owner===BUS.uid?`<button class="del" data-del="${b.id}" title="버스 삭제">삭제</button>`:''}</div></div>`;
+  }).join('');
+}
+function needMe(){ const me = meGet(); if(!me){ toast('먼저 위에서 내 닉네임을 골라 주세요'); $('meSel').focus(); } return me; }
+const FV = ()=>firebase.firestore.FieldValue;
+$('busList').addEventListener('click', async e=>{
+  const b = e.target.closest('button'); if(!b || !BUS.db) return;
+  const id = b.dataset.ride||b.dataset.drive||b.dataset.undrive||b.dataset.del; if(!id) return;
+  const ref = BUS.db.collection('buses').doc(id), bus = BUS.list.find(x=>x.id===id);
+  try{
+    if(b.dataset.del!==undefined){ if(await busAsk('이 버스를 삭제할까요?')) { await ref.delete(); toast('버스를 삭제했어요'); } return; }
+    const me = needMe(); if(!me) return;
+    if(b.dataset.ride!==undefined){
+      if((bus.riders||[]).includes(me)){ await ref.update({riders:FV().arrayRemove(me)}); toast('하차했어요'); }
+      else { if(bus.driver===me) return toast('기사님은 이미 버스에 있어요'); await ref.update({riders:FV().arrayUnion(me)}); toast('탑승 완료! 🚌'); }
+    } else if(b.dataset.drive!==undefined){
+      if(bus.driver) return toast('이미 기사님이 있어요');
+      const r = (bus.riders||[]).filter(x=>x!==me);
+      await ref.update({driver:me, riders:r}); toast('기사님 감사합니다! 🙇');
+    } else if(b.dataset.undrive!==undefined){ await ref.update({driver:''}); toast('운전을 취소했어요'); }
+  }catch(err){ if(/permission/.test(err.code||'')) toast('자리가 꽉 찼거나 권한이 없어요'); else busErr(err); }
+});
+function busAsk(msg){ return new Promise(res=>{ const o=document.createElement('div'); o.className='overlay';
+  o.innerHTML=`<div class="modal panel" style="width:min(360px,100%)"><div class="m-body"><p style="margin:0">${esc(msg)}</p></div><div class="pop-foot"><button data-n>취소</button><button class="primary" data-y>삭제</button></div></div>`;
+  document.body.appendChild(o); o.onclick=e=>{ if(e.target.dataset.y!==undefined){o.remove();res(true);} else if(e.target.dataset.n!==undefined||e.target===o){o.remove();res(false);} }; }); }
+// 내 닉네임
+$('meSel').addEventListener('change', e=>{ if(e.target.value){ meSet(e.target.value); toast(`${e.target.value}님 반가워요!`); } renderMe(); renderBuses(); });
+// 버스 만들기 폼
+$('bfDungeon').innerHTML = BUS_DUNGEONS.map((d,i)=>`<button data-v="${d.id}"${i?'':' class="on"'}>${d.name}</button>`).join('');
+function segPick(box, key, cb){ $(box).addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; $(box).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); BUS[key]=b.dataset.v; cb&&cb(); }); }
+segPick('bfMode','mode'); segPick('bfDungeon','dungeon', ()=>{ $('bfEtc').hidden = BUS.dungeon!=='etc'; if(BUS.dungeon==='etc') $('bfEtc').focus(); });
+$('bfMinus').onclick = ()=>{ BUS.seats=Math.max(1,BUS.seats-1); $('bfSeats').textContent=BUS.seats; };
+$('bfPlus').onclick = ()=>{ BUS.seats=Math.min(8,BUS.seats+1); $('bfSeats').textContent=BUS.seats; };
+$('btnNewBus').addEventListener('click', ()=>{
+  if(!needMe()) return;
+  const d = new Date(Date.now()+30*60e3); d.setMinutes(Math.ceil(d.getMinutes()/10)*10,0,0);
+  $('bfDate').value = isoDay(d); $('bfTime').value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  $('busForm').hidden = false; $('btnNewBus').hidden = true;
+});
+$('bfCancel').onclick = ()=>{ $('busForm').hidden = true; $('btnNewBus').hidden = false; };
+$('bfCreate').addEventListener('click', async ()=>{
+  const me = needMe(); if(!me) return;
+  if(!BUS.db || !BUS.uid) return toast('아직 연결 중이에요. 잠시 후 다시 눌러 주세요');
+  const title = BUS.dungeon==='etc' ? $('bfEtc').value.trim() : BUS_DUNGEONS.find(d=>d.id===BUS.dungeon).name;
+  if(!title) return toast('던전 이름을 적어 주세요');
+  if(!$('bfDate').value || !$('bfTime').value) return toast('출발 날짜와 시간을 골라 주세요');
+  const time = new Date(`${$('bfDate').value}T${$('bfTime').value}:00`);
+  if(time < new Date(Date.now()-5*60e3)) return toast('이미 지난 시간이에요');
+  const b = $('bfCreate'); b.disabled = true;
+  try{
+    await BUS.db.collection('buses').add({
+      dungeon:BUS.dungeon, title, time, seats:BUS.seats, memo:$('bfMemo').value.trim().slice(0,40),
+      driver: BUS.mode==='drive' ? me : '', riders: BUS.mode==='drive' ? [] : [me],
+      owner:BUS.uid, created:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast(BUS.mode==='drive' ? '버스를 띄웠어요! 🚌' : '기사님을 기다려요 🙋'); $('bfMemo').value=''; $('bfCancel').onclick();
+  }catch(err){ busErr(err); }
+  b.disabled = false;
+});
+setInterval(()=>{ if(!$('v-bus').hidden && BUS.list.length) renderBuses(); }, 60000);   // "n분 후" 갱신
 
 /* ---------- 팝업 공지 (오늘 하루 보지 않기는 이 기기에만 기억) ---------- */
 function showPopup(){
