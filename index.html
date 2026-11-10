@@ -382,6 +382,10 @@ button.seat{display:block;width:100%;cursor:pointer;font:600 13px var(--font);ju
 .seat.dseat.f{background:var(--r0);color:var(--r0f);border-color:transparent}
 .seat.dseat.f.me{background:var(--r0f);color:#fff}
 .seat:not(.dseat) i{display:none}
+.seat em{display:block;font-style:normal;font-size:11px;font-weight:700;margin-top:1px;opacity:.9;font-variant-numeric:tabular-nums}
+.sheet .cp-in{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.sheet .cp-in label{font-size:13px;font-weight:700;white-space:nowrap}
+.sheet .cp-in input{flex:1;min-width:0;font-size:16px;font-variant-numeric:tabular-nums}
 .seats .seat{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .seats .seat{max-width:100%}
 button.seat:not(.f):hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
@@ -477,6 +481,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
         <div class="seg" id="bfMode"><button data-v="drive" class="on">🚌 내가 기사</button><button data-v="need">🙋 기사 구해요</button></div></div>
       <div class="bf-row"><span class="bf-l">출발</span><input type="date" id="bfDate"><input type="time" id="bfTime" step="300"></div>
       <div class="bf-row"><span class="bf-l">인원</span><span class="hint" style="font-size:13px">기사 1명 + 승객 3명 = 총 4명</span></div>
+      <div class="bf-row" id="bfCpRow" hidden><span class="bf-l">내 전투력</span><input type="text" id="bfCp" inputmode="numeric" maxlength="12" placeholder="예) 523000"></div>
       <div class="bf-row"><span class="bf-l">메모</span><input type="text" id="bfMemo" maxlength="40" placeholder="선택 · 예) 초보 환영, 보이스 가능"></div>
       <div class="bf-foot"><button id="bfCancel">취소</button><button class="primary" id="bfCreate">버스 출발 등록</button></div>
     </div>
@@ -862,7 +867,8 @@ function renderBuses(){
     const dseat = b.driver ? (b.driver===me ? `<button class="seat dseat f me" data-undrive="${b.id}" title="눌러서 기사에서 내리기"><i>기사</i>${esc(b.driver)}</button>` : `<div class="seat dseat f" title="${esc(b.driver)}"><i>기사</i>${esc(b.driver)}</div>`)
                            : `<button class="seat dseat" data-drive="${b.id}" title="눌러서 기사로 탑승"><i>기사</i>빈자리</button>`;
     const seats = dseat + Array.from({length:b.seats},(_,i)=> riders[i]
-        ? (riders[i]===me ? `<button class="seat f me" data-leave="${b.id}" title="눌러서 하차">${esc(riders[i])}</button>` : `<div class="seat f" title="${esc(riders[i])}">${esc(riders[i])}</div>`)
+        ? (()=>{ const c = (b.cp||{})[riders[i]], cpH = c ? `<em>⚔ ${cpShort(c)}</em>` : '', tt = esc(riders[i]) + (c ? ` · 전투력 ${c.toLocaleString('ko-KR')}` : '');
+                 return riders[i]===me ? `<button class="seat f me" data-leave="${b.id}" title="${tt} · 눌러서 하차">${esc(riders[i])}${cpH}</button>` : `<div class="seat f" title="${tt}">${esc(riders[i])}${cpH}</div>`; })()
         : `<button class="seat" data-seat="${b.id}" title="눌러서 탑승">빈자리</button>`).join('');
     const drv = b.driver ? `<span class="drv-badge${b.driver===me?' me':''}">🚌 기사</span><b>${esc(b.driver)}</b>${b.driver===me?` <button class="btn-x" data-undrive="${b.id}">운전 그만</button>`:''}`
                          : `<span class="need">🙋 기사 구하는 중</span> <button class="primary" data-drive="${b.id}">운전할게요</button>`;
@@ -874,6 +880,11 @@ function renderBuses(){
       <div class="bus-a">${ride}${b.owner===BUS.uid?`<button class="del" data-del="${b.id}" title="버스 삭제">삭제</button>`:''}</div></div>`;
   }).join('');
 }
+// 전투력: 숫자만, 이 기기에 기억
+const cpParse = v=>{ const n = parseInt(String(v||'').replace(/[^0-9]/g,''),10); return n>0 && n<1e12 ? n : 0; };
+const cpGet = ()=>{ try{ return localStorage.getItem('guild-cp')||''; }catch(e){ return ''; } };
+const cpSet = n=>{ try{ localStorage.setItem('guild-cp', String(n)); }catch(e){} };
+const cpShort = n=> !n ? '' : n>=1e8 ? (n/1e8).toFixed(n>=1e9?0:1).replace(/\.0$/,'')+'억' : n>=1e4 ? (n/1e4).toFixed(n>=1e6?0:1).replace(/\.0$/,'')+'만' : n.toLocaleString('ko-KR');
 function needMe(){ const me = meGet(); if(!me){ toast('먼저 위에서 내 닉네임을 골라 주세요'); $('meSel').focus(); } return me; }
 const FV = ()=>firebase.firestore.FieldValue;
 /* 자리 바꾸기는 트랜잭션으로 (동시에 눌러도 서로 덮어쓰지 않게).
@@ -885,7 +896,8 @@ async function mutateBus(id, fn){
     const snap = await tx.get(ref); if(!snap.exists) throw {msg:'이미 사라진 버스예요'};
     const d = snap.data(); const r = fn({riders:[...(d.riders||[])], driver:d.driver||'', seats:d.seats});
     if(!r) return null;
-    const patch = {riders:r.riders, driver:r.driver};
+    const cp = {}; r.riders.forEach(n=>{ const v = (r.cp && r.cp[n]) || (d.cp||{})[n]; if(v) cp[n] = v; });   // 탄 사람 것만 남김
+    const patch = {riders:r.riders, driver:r.driver, cp};
     if(!r.driver && !r.riders.length) patch.emptyAt = firebase.firestore.FieldValue.serverTimestamp();
     else if(d.emptyAt) patch.emptyAt = null;
     tx.update(ref, patch); return r.msg;
@@ -898,13 +910,17 @@ $('busList').addEventListener('click', async e=>{
   try{
     if(b.dataset.del!==undefined){ if(await busAsk('이 버스를 삭제할까요?')) { await BUS.db.collection('buses').doc(id).delete(); toast('버스를 삭제했어요'); } return; }
     const me = needMe(); if(!me) return;
-    let pick = null;
-    if(b.dataset.seat!==undefined){ pick = await seatSheet(bus, me); if(!pick) return; }
+    let pick = null, myCp = 0;
+    const wantsRide = b.dataset.ride!==undefined && !(bus.riders||[]).includes(me);
+    if(b.dataset.seat!==undefined || wantsRide){
+      if(wantsRide && bus.driver===me) return toast('기사님은 이미 버스에 있어요');
+      const r = await seatSheet(bus, me, wantsRide); if(!r) return; pick = r.pick; myCp = r.cp;
+    }
     const msg = await mutateBus(id, s=>{
       const on = s.riders.includes(me), full = s.riders.length >= s.seats;
       const asDriver = ()=>{ if(s.driver && s.driver!==me) throw {msg:'이미 기사님이 있어요'}; return {driver:me, riders:s.riders.filter(x=>x!==me), msg:'기사로 탑승했어요! 🚌'}; };
       const asRider = ()=>{ if(on) throw {msg:'이미 탑승 중이에요'}; if(full) throw {msg:'자리가 꽉 찼어요'};
-                            return {driver:s.driver===me?'':s.driver, riders:[...s.riders, me], msg:'승객으로 탑승했어요! 🙋'}; };
+                            return {driver:s.driver===me?'':s.driver, riders:[...s.riders, me], cp:{[me]:myCp}, msg:'승객으로 탑승했어요! 🙋'}; };
       if(b.dataset.leave!==undefined) return {driver:s.driver, riders:s.riders.filter(x=>x!==me), msg:'하차했어요'};
       if(pick==='driver' || b.dataset.drive!==undefined) return asDriver();
       if(pick==='rider') return asRider();
@@ -924,15 +940,25 @@ $('busList').addEventListener('click', async e=>{
   }
 });
 // 빈자리를 누르면: 기사로 / 승객으로 선택
-function seatSheet(bus, me){ return new Promise(res=>{
+function seatSheet(bus, me, riderOnly=false){ return new Promise(res=>{
   const riders = bus.riders||[], hasDrv = bus.driver && bus.driver!==me, amDrv = bus.driver===me, full = riders.length >= bus.seats;
   const o = document.createElement('div'); o.className='overlay';
   o.innerHTML = `<div class="modal panel sheet"><div class="m-head"><h2>${esc(me)}님, 어떻게 탈까요?</h2></div><div class="m-body">
-    <button class="pick drv" data-p="driver"${hasDrv?' disabled':''}><span>🚌</span><b>기사로 탑승</b><small>${hasDrv?`이미 기사 ${esc(bus.driver)}님이 있어요`:amDrv?'지금 기사예요':'운전해서 승객을 태워요'}</small></button>
+    <div class="cp-in"><label for="sheetCp">⚔ 내 전투력</label><input type="text" id="sheetCp" inputmode="numeric" maxlength="12" placeholder="승객은 꼭 적어 주세요" value="${esc(cpGet())}"></div>
+    <button class="pick drv" data-p="driver"${hasDrv?' disabled':''}${riderOnly?' hidden':''}><span>🚌</span><b>기사로 탑승</b><small>${hasDrv?`이미 기사 ${esc(bus.driver)}님이 있어요`:amDrv?'지금 기사예요':'운전해서 승객을 태워요'}</small></button>
     <button class="pick" data-p="rider"${(full||riders.includes(me))?' disabled':''}><span>🙋</span><b>승객으로 탑승</b><small>${riders.includes(me)?'이미 탑승 중이에요':full?'자리가 꽉 찼어요':amDrv?'기사에서 내려 승객으로 타요':'빈자리에 앉아요'}</small></button>
     <button class="pick-cancel" data-p="">취소</button></div></div>`;
   document.body.appendChild(o);
-  o.onclick = e=>{ const t=e.target.closest('[data-p]'); if(t && !t.disabled){ o.remove(); res(t.dataset.p||null); } else if(e.target===o){ o.remove(); res(null); } };
+  o.onclick = e=>{
+    const t = e.target.closest('[data-p]');
+    if(e.target===o || (t && t.dataset.p==='')){ o.remove(); return res(null); }
+    if(!t || t.disabled) return;
+    const cp = cpParse(o.querySelector('#sheetCp').value);
+    if(t.dataset.p==='rider' && !cp){ toast('승객은 전투력을 숫자로 적어 주세요'); o.querySelector('#sheetCp').focus(); return; }
+    if(cp) cpSet(cp);
+    o.remove(); res({pick:t.dataset.p, cp});
+  };
+  setTimeout(()=>{ const i=o.querySelector('#sheetCp'); if(i && !i.value) i.focus(); }, 50);
 }); }
 function busAsk(msg){ return new Promise(res=>{ const o=document.createElement('div'); o.className='overlay';
   o.innerHTML=`<div class="modal panel" style="width:min(360px,100%)"><div class="m-body"><p style="margin:0">${esc(msg)}</p></div><div class="pop-foot"><button data-n>취소</button><button class="primary" data-y>삭제</button></div></div>`;
@@ -941,7 +967,7 @@ function busAsk(msg){ return new Promise(res=>{ const o=document.createElement('
 $('meSel').addEventListener('change', e=>{ if(e.target.value){ meSet(e.target.value); toast(`${e.target.value}님 반가워요!`); } renderMe(); renderBuses(); });
 // 버스 만들기 폼
 function segPick(box, key, cb){ $(box).addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; $(box).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); BUS[key]=b.dataset.v; cb&&cb(); }); }
-segPick('bfMode','mode');
+segPick('bfMode','mode', ()=>{ $('bfCpRow').hidden = BUS.mode!=='need'; if(BUS.mode==='need'){ $('bfCp').value = cpGet(); } });
 $('btnNewBus').addEventListener('click', ()=>{
   if(!needMe()) return;
   const d = new Date(Date.now()+30*60e3); d.setMinutes(Math.ceil(d.getMinutes()/10)*10,0,0);
@@ -955,12 +981,14 @@ $('bfCreate').addEventListener('click', async ()=>{
   const title = BUS_DUNGEON.name;
   if(!$('bfDate').value || !$('bfTime').value) return toast('출발 날짜와 시간을 골라 주세요');
   const time = new Date(`${$('bfDate').value}T${$('bfTime').value}:00`);
+  let cpNew = 0;
+  if(BUS.mode==='need'){ cpNew = cpParse($('bfCp').value); if(!cpNew) return toast('내 전투력을 숫자로 적어 주세요'); cpSet(cpNew); }
   if(time < new Date(Date.now()-5*60e3)) return toast('이미 지난 시간이에요');
   const b = $('bfCreate'); b.disabled = true;
   try{
     await BUS.db.collection('buses').add({
       dungeon:BUS_DUNGEON.id, title, time, seats:BUS.seats, memo:$('bfMemo').value.trim().slice(0,40),
-      driver: BUS.mode==='drive' ? me : '', riders: BUS.mode==='drive' ? [] : [me],
+      driver: BUS.mode==='drive' ? me : '', riders: BUS.mode==='drive' ? [] : [me], cp: BUS.mode==='drive' ? {} : {[me]: cpNew},
       owner:BUS.uid, created:firebase.firestore.FieldValue.serverTimestamp()
     });
     toast(BUS.mode==='drive' ? '버스를 띄웠어요! 🚌' : '기사님을 기다려요 🙋'); $('bfMemo').value=''; $('bfCancel').onclick();
