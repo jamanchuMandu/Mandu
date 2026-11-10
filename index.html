@@ -358,6 +358,18 @@ table.mt select{padding:4px 8px;width:100%}
 .stepper button{width:38px;justify-content:center;font-size:16px;padding:6px 0}
 .stepper b{min-width:28px;text-align:center;font-size:18px;font-variant-numeric:tabular-nums}
 .bf-foot{display:flex;justify-content:flex-end;gap:8px}
+.bus-guide>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:12px 16px;font-weight:700;font-size:15px}
+.bus-guide>summary::-webkit-details-marker{display:none}
+.bus-guide>summary .hint{font-weight:500;font-size:12px}
+.bus-guide>summary::after{content:'펼치기 ▾';margin-left:auto;font-size:12px;font-weight:600;color:var(--muted)}
+.bus-guide[open]>summary::after{content:'접기 ▴'}
+.bg-list{list-style:none;margin:0;padding:0 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.bg-list li{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.bg-list a{display:block;background:var(--surface);border-bottom:1px solid var(--line)}
+.bg-list img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain;background:var(--surface)}
+.bg-list .bg-t{display:flex;gap:8px;padding:10px 12px;font-size:13.5px;line-height:1.55;white-space:pre-line;min-width:0}
+.bg-list .bg-n{flex:none;width:22px;height:22px;border-radius:99px;background:var(--accent);color:var(--on-fg);font-size:12px;font-weight:700;display:grid;place-items:center;margin-top:1px}
+@media (max-width:640px){ .bg-list{grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:78%;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:14px} .bg-list li{scroll-snap-align:start} }
 .bus-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .bus{padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .bus.full{opacity:.85}
@@ -476,6 +488,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
       <div class="me-box"><span class="hint">나</span><b id="meName">닉네임 선택</b><select id="meSel" aria-label="내 닉네임"></select></div>
       <div class="tb-right"><button class="primary" id="btnNewBus">＋ 산신마루 버스 만들기</button></div>
     </div>
+    <details class="panel bus-guide" id="busGuide" hidden></details>
     <div class="panel bus-form" id="busForm" hidden>
       <div class="bf-row"><span class="bf-l">종류</span>
         <div class="seg" id="bfMode"><button data-v="drive" class="on">🚌 내가 기사</button><button data-v="need">🙋 기사 구해요</button></div></div>
@@ -743,10 +756,21 @@ function renderShop(){
     : `<div class="panel card"><div class="empty">아직 등록된 품목이 없습니다.</div></div>`;
   $('v-shop').innerHTML = h;
 }
+/* ---------- 버스 이용 방법 카드 (출석체크 파일 ⓘ 공지 설정에서 수정) ---------- */
+function renderBusGuide(){
+  const el = $('busGuide'), steps = ((S.busGuide||{}).steps||[]).filter(x=>x.img||x.text);
+  if(!steps.length){ el.hidden = true; return; }
+  let closed = false; try{ closed = localStorage.getItem('guild-busguide-closed')==='1'; }catch(e){}
+  el.innerHTML = `<summary>📖 버스 이용 방법 <span class="hint">${steps.length}단계</span></summary>
+    <ol class="bg-list">${steps.map((x,i)=>`<li>${x.img?`<a href="${esc(x.img)}" target="_blank" rel="noopener" title="크게 보기"><img src="${esc(x.img)}" alt="${i+1}단계" loading="lazy"></a>`:''}
+      ${x.text?`<div class="bg-t"><span class="bg-n">${i+1}</span><span>${esc(x.text)}</span></div>`:`<div class="bg-t"><span class="bg-n">${i+1}</span></div>`}</li>`).join('')}</ol>`;
+  el.open = !closed; el.hidden = false;
+  if(!el._t){ el._t = 1; el.addEventListener('toggle', ()=>{ try{ localStorage.setItem('guild-busguide-closed', el.open?'0':'1'); }catch(e){} }); }
+}
 function renderAll(){
   $('brand').innerHTML = `${esc(guildName())}<span>출석부</span>`;
   document.title = `${guildName()} 출석부`;
-  renderHome(); renderAttendance(); renderDist(); renderShop(); renderFab();
+  renderHome(); renderAttendance(); renderDist(); renderShop(); renderFab(); renderBusGuide();
 }
 
 /* ---------- 라우팅 ---------- */
