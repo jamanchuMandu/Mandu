@@ -1,5 +1,5 @@
 {
- "budget": 154,
+ "budget": 204,
  "minOne": false,
  "events": [
   {
@@ -820,7 +820,7 @@
    "lock": true
   }
  ],
- "tokens": 35648,
+ "tokens": 47138,
  "popup": {
   "on": true,
   "title": "문파 버스 지원 안내",
