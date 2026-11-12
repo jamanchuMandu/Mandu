@@ -495,7 +495,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
         <div class="seg" id="bfMode"><button data-v="drive" class="on">🚌 내가 기사</button><button data-v="need">🙋 기사 구해요</button></div></div>
       <div class="bf-row"><span class="bf-l">출발</span><input type="date" id="bfDate"><input type="time" id="bfTime" step="300"></div>
       <div class="bf-row"><span class="bf-l">인원</span><span class="hint" style="font-size:13px">총 4명 · 기사가 2명 이상이어도 돼요</span></div>
-      <div class="bf-row" id="bfCpRow" hidden><span class="bf-l">내 전투력</span><input type="text" id="bfCp" inputmode="numeric" maxlength="12" placeholder="예) 523000"></div>
+      <div class="bf-row" id="bfCpRow" hidden><span class="bf-l">내 공격력</span><input type="text" id="bfCp" inputmode="numeric" maxlength="12" placeholder="예) 523000"></div>
       <div class="bf-row"><span class="bf-l">메모</span><input type="text" id="bfMemo" maxlength="40" placeholder="선택 · 예) 초보 환영, 보이스 가능"></div>
       <div class="bf-foot"><button id="bfCancel">취소</button><button class="primary" id="bfCreate">버스 출발 등록</button></div>
     </div>
@@ -894,7 +894,7 @@ function renderBuses(){
     const d = b.time.toDate(), {drivers, riders, cap} = busNorm(b), cnt = drivers.length + riders.length, full = cnt >= cap;
     const on = me && (drivers.includes(me) || riders.includes(me));
     const dSeat = n => n===me ? `<button class="seat dseat f me" data-leave="${b.id}" title="${esc(n)} · 눌러서 하차"><i>기사</i>${esc(n)}</button>` : `<div class="seat dseat f" title="${esc(n)} (기사)"><i>기사</i>${esc(n)}</div>`;
-    const rSeat = n => { const c = (b.cp||{})[n], cpH = c ? `<em>⚔ ${cpShort(c)}</em>` : '', tt = esc(n) + (c ? ` · 전투력 ${c.toLocaleString('ko-KR')}` : '');
+    const rSeat = n => { const c = (b.cp||{})[n], cpH = c ? `<em>⚔ ${cpShort(c)}</em>` : '', tt = esc(n) + (c ? ` · 공격력 ${c.toLocaleString('ko-KR')}` : '');
       return n===me ? `<button class="seat f me" data-leave="${b.id}" title="${tt} · 눌러서 하차">${esc(n)}${cpH}</button>` : `<div class="seat f" title="${tt}">${esc(n)}${cpH}</div>`; };
     const seats = [...drivers.map(dSeat), ...riders.map(rSeat),
       ...Array.from({length:Math.max(0, cap-cnt)}, ()=>`<button class="seat" data-seat="${b.id}" title="눌러서 기사/승객으로 탑승">빈자리</button>`)].join('');
@@ -908,7 +908,7 @@ function renderBuses(){
       <div class="bus-a">${ride}${b.owner===BUS.uid?`<button class="del" data-del="${b.id}" title="버스 삭제">삭제</button>`:''}</div></div>`;
   }).join('');
 }
-// 전투력: 숫자만, 이 기기에 기억
+// 공경력: 숫자만, 이 기기에 기억
 const cpParse = v=>{ const n = parseInt(String(v||'').replace(/[^0-9]/g,''),10); return n>0 && n<1e12 ? n : 0; };
 const cpGet = ()=>{ try{ return localStorage.getItem('guild-cp')||''; }catch(e){ return ''; } };
 const cpSet = n=>{ try{ localStorage.setItem('guild-cp', String(n)); }catch(e){} };
@@ -966,7 +966,7 @@ function seatSheet(bus, me){ return new Promise(res=>{
   const full = !amDrv && !amRdr && drivers.length + riders.length >= cap;
   const o = document.createElement('div'); o.className='overlay';
   o.innerHTML = `<div class="modal panel sheet"><div class="m-head"><h2>${esc(me)}님, 어떻게 탈까요?</h2></div><div class="m-body">
-    <div class="cp-in"><label for="sheetCp">⚔ 내 전투력</label><input type="text" id="sheetCp" inputmode="numeric" maxlength="12" placeholder="승객은 꼭 적어 주세요" value="${esc(cpGet())}"></div>
+    <div class="cp-in"><label for="sheetCp">⚔ 내 공격력</label><input type="text" id="sheetCp" inputmode="numeric" maxlength="12" placeholder="승객은 꼭 적어 주세요" value="${esc(cpGet())}"></div>
     <button class="pick drv" data-p="driver"${(full||amDrv)?' disabled':''}><span>🚌</span><b>기사로 탑승</b><small>${amDrv?'지금 기사예요':full?'자리가 꽉 찼어요':amRdr?'승객에서 기사로 바꿔요':drivers.length?`기사 ${drivers.length}명과 같이 운전해요`:'운전해서 승객을 태워요'}</small></button>
     <button class="pick" data-p="rider"${(full||amRdr)?' disabled':''}><span>🙋</span><b>승객으로 탑승</b><small>${amRdr?'이미 탑승 중이에요':full?'자리가 꽉 찼어요':amDrv?'기사에서 내려 승객으로 타요':'빈자리에 앉아요'}</small></button>
     <button class="pick-cancel" data-p="">취소</button></div></div>`;
@@ -976,7 +976,7 @@ function seatSheet(bus, me){ return new Promise(res=>{
     if(e.target===o || (t && t.dataset.p==='')){ o.remove(); return res(null); }
     if(!t || t.disabled) return;
     const cp = cpParse(o.querySelector('#sheetCp').value);
-    if(t.dataset.p==='rider' && !cp){ toast('승객은 전투력을 숫자로 적어 주세요'); o.querySelector('#sheetCp').focus(); return; }
+    if(t.dataset.p==='rider' && !cp){ toast('승객은 공격력을 숫자로 적어 주세요'); o.querySelector('#sheetCp').focus(); return; }
     if(cp) cpSet(cp);
     o.remove(); res({pick:t.dataset.p, cp});
   };
@@ -1004,7 +1004,7 @@ $('bfCreate').addEventListener('click', async ()=>{
   if(!$('bfDate').value || !$('bfTime').value) return toast('출발 날짜와 시간을 골라 주세요');
   const time = new Date(`${$('bfDate').value}T${$('bfTime').value}:00`);
   let cpNew = 0;
-  if(BUS.mode==='need'){ cpNew = cpParse($('bfCp').value); if(!cpNew) return toast('내 전투력을 숫자로 적어 주세요'); cpSet(cpNew); }
+  if(BUS.mode==='need'){ cpNew = cpParse($('bfCp').value); if(!cpNew) return toast('내 공격력을 숫자로 적어 주세요'); cpSet(cpNew); }
   if(time < new Date(Date.now()-5*60e3)) return toast('이미 지난 시간이에요');
   const b = $('bfCreate'); b.disabled = true;
   try{
