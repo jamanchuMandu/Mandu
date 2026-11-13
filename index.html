@@ -65,6 +65,10 @@ nav.top .in{display:flex;align-items:center;gap:12px;height:56px}
 .ab-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
 .ab{padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .ab.me{border-color:var(--accent)}
+.ab-h .kind{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.kind.away{background:var(--warn-soft);color:var(--warn)}
+.kind.park{background:var(--r3);color:var(--r3f)}
+.ab-day h3 .cnt.park{background:var(--r3);color:var(--r3f)}
 .ab-h{display:flex;align-items:center;gap:8px;min-width:0}
 .ab-h b{font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ab-h .del{margin-left:auto;padding:4px 10px;font-size:12px;background:transparent;color:var(--muted)}
@@ -352,7 +356,8 @@ table.mt select{padding:4px 8px;width:100%}
 .shop-item .lm{font-size:12px;color:var(--t-si-fg);font-weight:600}
 .shop-item .lk{font-size:13px;font-weight:700;color:var(--warn)}
 .shop-item.locked{opacity:.6}
-@media (max-width:420px){.tabs a{padding:8px 9px}}
+@media (max-width:420px){.tabs{gap:0;justify-content:space-between}.tabs a{padding:8px 6px;font-size:13.5px}}
+@media (max-width:370px){.tabs a{padding:8px 4px;font-size:13px}}
 /* 문파 소개 영상 (세로 영상) */
 .video-card .vwrap{display:flex;justify-content:center}
 .video-card video{width:100%;max-width:380px;max-height:78vh;aspect-ratio:9/16;border-radius:14px;background:#000;display:block}
@@ -477,7 +482,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
     <a href="#distribution" data-v="distribution">분배표</a>
     <a href="#shop" data-v="shop">문파상점</a>
     <a href="#bus" data-v="bus">🚌 버스</a>
-    <a href="#away" data-v="away">🙅 부재</a>
+    <a href="#away" data-v="away">🙅 부재&amp;주차</a>
   </div>
   <div class="tools"><button id="btnTheme" title="테마 전환" aria-label="테마 전환">◐</button></div>
 </div></nav>
@@ -524,17 +529,18 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
   <section class="view" id="v-away" hidden>
     <div class="panel toolbar bus-top">
       <div class="me-box"><span class="hint">나</span><b class="meName">닉네임 선택</b><select class="meSel" id="meSel2" aria-label="내 닉네임"></select></div>
-      <div class="tb-right"><button class="primary" id="btnNewAb">＋ 부재 등록</button></div>
+      <div class="tb-right"><button class="primary" id="btnNewAb">＋ 부재·주차 등록</button></div>
     </div>
     <div class="panel bus-form ab-form" id="abForm" hidden>
+      <div class="bf-row"><span class="bf-l">종류</span><div class="seg" id="abKind"><button data-v="away" class="on">🙅 부재</button><button data-v="park">🅿️ 주차</button></div></div>
       <div class="bf-row"><span class="bf-l">날짜</span><input type="date" id="abFrom"><span class="hint">~</span><input type="date" id="abTo"><span class="hint" style="font-size:12px">하루면 같은 날짜</span></div>
       <div class="bf-row"><span class="bf-l">던전</span><div class="seg" id="abTypes"></div></div>
       <div class="bf-row"><span class="bf-l">사유</span><input type="text" id="abMemo" maxlength="40" placeholder="선택 · 예) 출장, 야근, 여행" style="flex:1;min-width:0"></div>
-      <div class="bf-foot"><button id="abCancel">취소</button><button class="primary" id="abCreate">부재 등록</button></div>
+      <div class="bf-foot"><button id="abCancel">취소</button><button class="primary" id="abCreate">등록</button></div>
     </div>
     <div id="abStatus" class="hint" style="margin:0"></div>
     <div class="ab-grid" id="abList"></div>
-    <p class="hint" style="margin:0">참석 못 하는 날을 미리 알려 주세요 · 날짜가 지나면 자동으로 사라져요 · 내가 올린 카드만 지울 수 있어요</p>
+    <p class="hint" style="margin:0">참석 못 하는 날(부재)이나 주차하는 날을 미리 알려 주세요 · 날짜가 지나면 자동으로 사라져요 · 내가 올린 카드만 지울 수 있어요</p>
   </section>
 </main>
 <footer class="in">보기 전용 페이지입니다 · 출석 기록은 문주가 관리합니다</footer>
@@ -1063,7 +1069,9 @@ setInterval(()=>{ if(!$('v-bus').hidden && BUS.list.length){ renderBuses(); clea
 
 /* ---------- 부재 표시: "이날 참석 못 해요" 카드 (Firebase absences 컬렉션) ---------- */
 const AB_TYPES = [{id:'all', ab:'전체'}, ...TYPES.map(t=>({id:t.id, ab:t.ab})), {id:'ss', ab:'산신마루'}];
-let AB = {started:false, db:null, uid:null, list:[], types:['all']};
+let AB = {started:false, db:null, uid:null, list:[], types:['all'], kind:'away'};
+const AB_KIND = {away:{ic:'🙅', name:'부재', verb:'불참'}, park:{ic:'🅿️', name:'주차', verb:'주차'}};
+const abKind = a => a.kind==='park' ? 'park' : 'away';
 function abMsg(t){ $('abStatus').textContent = t||''; }
 function abErr(e){
   const c = e && (e.code||e.message||'');
@@ -1095,16 +1103,16 @@ function renderAbs(){
   if(!AB.started) return;
   const me = meGet(), today = isoDay(new Date());
   const list = AB.list.filter(a=>a.to >= today);
-  if(!list.length){ $('abList').innerHTML = `<div class="panel card"><div class="empty">등록된 부재가 없어요. 참석 못 하는 날이 있으면 <b>＋ 부재 등록</b>으로 알려 주세요!</div></div>`; return; }
+  if(!list.length){ $('abList').innerHTML = `<div class="panel card"><div class="empty">등록된 부재·주차가 없어요. 참석 못 하거나 주차하는 날이 있으면 <b>＋ 부재·주차 등록</b>으로 알려 주세요!</div></div>`; return; }
   // 날짜별로 묶기 (여러 날이면 시작일 기준, 이미 시작한 건 오늘로)
   const groups = {};
   list.forEach(a=>{ const k = a.from < today ? today : a.from; (groups[k] = groups[k]||[]).push(a); });
   const rankOf = n => (S.members.find(m=>m.name===n)||{}).rank || '';
-  $('abList').innerHTML = Object.keys(groups).sort().map(k=>`<div class="ab-day"><h3>${ymd(k)} <span class="rel">${dayRel(k)}</span> <span class="cnt">${groups[k].length}명</span></h3>
+  $('abList').innerHTML = Object.keys(groups).sort().map(k=>`<div class="ab-day"><h3>${ymd(k)} <span class="rel">${dayRel(k)}</span> ${(n=>n?`<span class="cnt">부재 ${n}</span>`:'')(groups[k].filter(a=>abKind(a)==='away').length)}${(n=>n?`<span class="cnt park">주차 ${n}</span>`:'')(groups[k].filter(a=>abKind(a)==='park').length)}</h3>
     <div class="ab-list">${groups[k].sort((x,y)=>x.name.localeCompare(y.name,'ko')).map(a=>{
       const mine = a.owner===AB.uid, tags = (a.types||['all']).map(t=>{ const x = AB_TYPES.find(y=>y.id===t); return x ? `<span class="chip" style="${t==='all'?'background:var(--warn-soft);color:var(--warn)':dgStyle(t)}">${x.ab}</span>` : ''; }).join('');
-      return `<div class="panel ab${a.name===me?' me':''}"><div class="ab-h"><b>${esc(a.name)}</b>${rankOf(a.name)?rankChip(rankOf(a.name)):''}${mine?`<button class="del" data-abdel="${a.id}">삭제</button>`:''}</div>
-        <div class="ab-when">🙅 ${a.from===a.to ? ymd(a.from) : `${ymd(a.from)} ~ ${ymd(a.to)}`} 불참</div>
+      return `<div class="panel ab${a.name===me?' me':''}"><div class="ab-h"><span class="kind ${abKind(a)}">${AB_KIND[abKind(a)].ic} ${AB_KIND[abKind(a)].name}</span><b>${esc(a.name)}</b>${rankOf(a.name)?rankChip(rankOf(a.name)):''}${mine?`<button class="del" data-abdel="${a.id}">삭제</button>`:''}</div>
+        <div class="ab-when">${a.from===a.to ? ymd(a.from) : `${ymd(a.from)} ~ ${ymd(a.to)}`} ${AB_KIND[abKind(a)].verb}</div>
         <div class="ab-tags">${tags}</div>${a.memo?`<div class="ab-memo">💬 ${esc(a.memo)}</div>`:''}</div>`; }).join('')}</div></div>`).join('');
 }
 function abTypesRender(){
@@ -1120,8 +1128,10 @@ $('btnNewAb').addEventListener('click', ()=>{
   if(!needMe()) return;
   const t = isoDay(new Date()); $('abFrom').value = t; $('abTo').value = t; $('abFrom').min = t; $('abTo').min = t;
   AB.types = ['all']; abTypesRender(); $('abMemo').value = '';
+  AB.kind = 'away'; $('abKind').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x.dataset.v==='away'));
   $('abForm').hidden = false; $('btnNewAb').hidden = true;
 });
+$('abKind').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; AB.kind = b.dataset.v; $('abKind').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); });
 $('abFrom').addEventListener('change', ()=>{ if(!$('abTo').value || $('abTo').value < $('abFrom').value) $('abTo').value = $('abFrom').value; $('abTo').min = $('abFrom').value; });
 $('abCancel').onclick = ()=>{ $('abForm').hidden = true; $('btnNewAb').hidden = false; };
 $('abCreate').addEventListener('click', async ()=>{
@@ -1135,15 +1145,15 @@ $('abCreate').addEventListener('click', async ()=>{
   const until = new Date(to+'T00:00:00'); until.setDate(until.getDate()+1);   // 끝 날짜 다음 날 0시에 사라짐
   const b = $('abCreate'); b.disabled = true;
   try{
-    await AB.db.collection('absences').add({name:me, from, to, types:AB.types.slice(), memo:$('abMemo').value.trim().slice(0,40),
+    await AB.db.collection('absences').add({kind:AB.kind, name:me, from, to, types:AB.types.slice(), memo:$('abMemo').value.trim().slice(0,40),
       owner:AB.uid, until, created:firebase.firestore.FieldValue.serverTimestamp()});
-    toast('부재를 알렸어요 🙅'); $('abCancel').onclick();
+    toast(AB.kind==='park' ? '주차를 알렸어요 🅿️' : '부재를 알렸어요 🙅'); $('abCancel').onclick();
   }catch(err){ abErr(err); }
   b.disabled = false;
 });
 $('abList').addEventListener('click', async e=>{
   const b = e.target.closest('[data-abdel]'); if(!b || !AB.db) return;
-  if(!await busAsk('이 부재 카드를 삭제할까요?')) return;
+  if(!await busAsk('이 카드를 삭제할까요?')) return;
   try{ await AB.db.collection('absences').doc(b.dataset.abdel).delete(); toast('삭제했어요'); }catch(err){ abErr(err); }
 });
 setInterval(()=>{ if(!$('v-away').hidden && AB.list.length){ renderAbs(); cleanupAbs(); } }, 60000);
