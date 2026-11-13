@@ -189,6 +189,10 @@ td.cell.on .dot::after{content:"O";color:var(--on-fg);opacity:1;font-weight:700}
 td.cell.tri .dot{background:var(--t-si);border:1.5px dashed var(--t-si-fg)}
 td.cell.tri .dot::after{content:"△";color:var(--t-si-fg);opacity:1;font-weight:700}
 td.cell.pre .dot::after{content:"–";opacity:.5}
+td.cell.fix{position:relative}
+td.cell.fix .fx{position:absolute;right:4px;top:3px;font-style:normal;font-size:10px;font-weight:700;padding:0 5px;border-radius:99px;line-height:15px}
+td.cell.fix .fx.away{background:var(--warn-soft);color:var(--warn)}
+td.cell.fix .fx.park{background:var(--r3);color:var(--r3f)}
 td.c-name .jd{font-size:10px;font-weight:600;color:var(--t-mi-fg);background:var(--t-mi);border-radius:99px;padding:1px 6px;white-space:nowrap}
 .tri-n{color:var(--t-si-fg)}
 table.g tbody tr:nth-child(odd) td{background-color:var(--row-a)}
@@ -503,7 +507,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
       </div>
     </div>
     <div class="panel"><div class="grid-wrap"><table class="g" id="grid"></table></div></div>
-    <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · – 가입 전 · 예상등급: 최근 4주 던전 불참 4회 이상이면 피만두 (신규 문파원은 가입일 이후만)</p>
+    <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · – 가입 전 · <b>부재/주차</b> 표시 = 미리 등록한 △ · 예상등급: 최근 4주 던전 불참 4회 이상이면 피만두 (신규 문파원은 가입일 이후만)</p>
   </section>
   <section class="view" id="v-distribution" hidden></section>
   <section class="view" id="v-shop" hidden></section>
@@ -744,7 +748,8 @@ function renderAttendance(){
     h += `<td class="sticky c-name"><div class="nm"><span>${esc(m.name)}</span>${m.joined&&m.joined>=sortedEvents()[0]?.date?`<span class="jd" title="가입일">${+m.joined.slice(5,7)}/${+m.joined.slice(8)} 가입</span>`:''}</div></td>`;
     h += `<td class="sticky c-rank">${rankChip(rk)}</td>`;
     h += `<td class="sticky c-exp">${ex.pi?`<span class="gr warn">${PI_RANK}</span>`:`<span class="gr keep">${esc(rk||'유지')}</span>`}<small>${win.grace?'유예 기간':`불참 ${ex.miss}/${ex.n}`}</small></td>`;
-    evs.forEach(e=>{ const v=S.att[m.id+'|'+e.id]; h += `<td class="cell${v===1?' on':v===2?' tri':(m.joined&&e.date<m.joined?' pre':'')}${we(e.id)}"><span class="dot"></span></td>`; });
+    evs.forEach(e=>{ const v=S.att[m.id+'|'+e.id], fx=(S.absFix||{})[m.id+'|'+e.id];
+      h += `<td class="cell${v===1?' on':v===2?' tri':(m.joined&&e.date<m.joined?' pre':'')}${fx?' fix':''}${we(e.id)}"${fx?` title="${fx.kind==='park'?'주차':'부재'} 등록${fx.memo?' · '+esc(fx.memo):''}"`:''}><span class="dot"></span>${fx?`<i class="fx ${fx.kind==='park'?'park':'away'}">${fx.kind==='park'?'주차':'부재'}</i>`:''}</td>`; });
     h += '</tr>';
   });
   const piN = S.members.filter(m=>expected(m,win).pi).length;
