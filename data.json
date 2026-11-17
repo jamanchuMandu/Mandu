@@ -1,5 +1,5 @@
 {
- "budget": 231,
+ "budget": 0,
  "minOne": false,
  "events": [
   {
@@ -994,7 +994,7 @@
    "lock": true
   }
  ],
- "tokens": 53190,
+ "tokens": 60,
  "popup": {
   "on": true,
   "title": "문파 보상 분배일 공지 (11/15)",
