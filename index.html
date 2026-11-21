@@ -76,6 +76,10 @@ nav.top .in{display:flex;align-items:center;gap:12px;height:56px}
 .ab-tags{display:flex;gap:4px;flex-wrap:wrap}
 .ab-memo{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 .ab-form input[type=date]{min-width:0}
+#abTypes button{display:inline-flex;flex-direction:column;align-items:center;line-height:1.25;padding:6px 12px}
+#abTypes button small{font-size:11px;font-weight:600;opacity:.8}
+#abTypes button.out{opacity:.5}
+#abTypes button.out small{text-decoration:line-through}
 .tools{display:flex;gap:6px}
 main{padding-block:20px 90px}
 .view{display:flex;flex-direction:column;gap:14px}
@@ -189,6 +193,8 @@ td.cell.on .dot::after{content:"O";color:var(--on-fg);opacity:1;font-weight:700}
 td.cell.tri .dot{background:var(--t-si);border:1.5px dashed var(--t-si-fg)}
 td.cell.tri .dot::after{content:"△";color:var(--t-si-fg);opacity:1;font-weight:700}
 td.cell.pre .dot::after{content:"–";opacity:.5}
+th.cut, td.cut{opacity:.45}
+th.cut small{display:block;font-size:10px;font-weight:600;color:var(--muted)}
 td.cell.fix{position:relative}
 td.cell.fix .fx{position:absolute;right:4px;top:3px;font-style:normal;font-size:10px;font-weight:700;padding:0 5px;border-radius:99px;line-height:15px}
 td.cell.fix .fx.away{background:var(--warn-soft);color:var(--warn)}
@@ -599,7 +605,8 @@ function sortedEvents(){
   return S.events.filter(e=>!isHidden(e)).sort((a,b)=> isoWeek(a.date)-isoWeek(b.date) || typeIdx(a.type)-typeIdx(b.type) || a.date.localeCompare(b.date));
 }
 // 출석값: 1 = O(1점), 2 = △(표시만, 0점)
-function score(mid){ return S.events.reduce((n,e)=>n+(!isHidden(e) && S.att[mid+'|'+e.id]===1?1:0),0); }
+const cutOld = e => !!S.scoreFrom && e.date < S.scoreFrom;   // 분배 후 다시 집계: 이전 일정은 점수에서 빠짐
+function score(mid){ return S.events.reduce((n,e)=>n+(!isHidden(e) && !cutOld(e) && S.att[mid+'|'+e.id]===1?1:0),0); }
 /* 최대잔여법 분배: 합계가 항상 가호 주머니 구매가능 갯수와 같음. 동률은 위쪽 행 우선 */
 function distribute(){
   const ms = S.members, sc = ms.map(m=>score(m.id)), res = ms.map(()=>0);
@@ -684,7 +691,7 @@ function renderHome(){
   const heldLast = lastEvs.filter(e=>S.members.some(m=>S.att[m.id+'|'+e.id]===1));
   const rate = heldLast.length ? Math.round(heldLast.reduce((a,e)=>a+S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length,0)/(heldLast.length*N)*100) : 0;
   let h = `<div class="hero"><span class="eyebrow">문파 채널</span><h1>${esc(guildName())}</h1>`;
-  h += `<div class="meta">집계 기간 ${periodText(evs)}${UPDATED?` · 마지막 업데이트 ${UPDATED}`:''}</div></div>`;
+  h += `<div class="meta">집계 기간 ${(x=>x.length?periodText(x):S.scoreFrom?`${fmtDate(S.scoreFrom)} ~`:'-')(evs.filter(e=>!cutOld(e)))}${UPDATED?` · 마지막 업데이트 ${UPDATED}`:''}</div></div>`;
   const L = channelLinks();
   if(notice() || L.length){
     h += `<div class="top-row${notice()&&L.length?'':' single'}">`;
@@ -740,8 +747,8 @@ function renderAttendance(){
   let h = '<thead><tr><th class="sticky c-dist" rowspan="3">분배</th><th class="sticky c-score" rowspan="3">참석<br>점수</th><th class="sticky c-name" rowspan="3">닉네임</th>';
   h += `<th class="sticky c-rank" rowspan="3">직위</th><th class="sticky c-exp" rowspan="3" title="${win.grace?`유예 기간 · ${fmtDate(COUNT_FROM)}부터 집계`:`${fmtDate(win.from)} ~ ${fmtDate(win.to)} 던전 불참 ${MISS_LIMIT}회 이상이면 피만두`}">예상등급<br><small style="font-weight:400;color:var(--muted)">${win.grace?`${+COUNT_FROM.slice(5,7)}/${+COUNT_FROM.slice(8)}부터`:'최근 4주'}</small></th>`;
   weeks.forEach(w=> h += `<th class="week" colspan="${w.n}">Week ${w.w}</th>`);
-  h += '</tr><tr>' + evs.map(e=>`<th class="ev ty-${e.type}${we(e.id)}">${TYPES[typeIdx(e.type)].name}</th>`).join('');
-  h += '</tr><tr>' + evs.map(e=>`<th class="${we(e.id)}" data-date="${e.date}">${fmtDate(e.date)}</th>`).join('') + '</tr></thead><tbody>';
+  h += '</tr><tr>' + evs.map(e=>`<th class="ev ty-${e.type}${we(e.id)}${cutOld(e)?' cut':''}">${TYPES[typeIdx(e.type)].name}</th>`).join('');
+  h += '</tr><tr>' + evs.map(e=>`<th class="${we(e.id)}${cutOld(e)?' cut':''}" data-date="${e.date}"${cutOld(e)?' title="분배 끝 · 점수에서 빠짐"':''}>${fmtDate(e.date)}${cutOld(e)?'<small>분배 끝</small>':''}</th>`).join('') + '</tr></thead><tbody>';
   orderedRows($('sort').value, $('search').value.trim()).forEach(({m,s})=>{
     const rk = m.rank||'', ex = expected(m, win);
     h += `<tr><td class="sticky c-dist">${distMap[m.id]}</td><td class="sticky c-score">${s}</td>`;
@@ -749,12 +756,12 @@ function renderAttendance(){
     h += `<td class="sticky c-rank">${rankChip(rk)}</td>`;
     h += `<td class="sticky c-exp">${ex.pi?`<span class="gr warn">${PI_RANK}</span>`:`<span class="gr keep">${esc(rk||'유지')}</span>`}<small>${win.grace?'유예 기간':`불참 ${ex.miss}/${ex.n}`}</small></td>`;
     evs.forEach(e=>{ const v=S.att[m.id+'|'+e.id], fx=(S.absFix||{})[m.id+'|'+e.id];
-      h += `<td class="cell${v===1?' on':v===2?' tri':(m.joined&&e.date<m.joined?' pre':'')}${fx?' fix':''}${we(e.id)}"${fx?` title="${fx.kind==='park'?'주차':'부재'} 등록${fx.memo?' · '+esc(fx.memo):''}"`:''}><span class="dot"></span>${fx?`<i class="fx ${fx.kind==='park'?'park':'away'}">${fx.kind==='park'?'주차':'부재'}</i>`:''}</td>`; });
+      h += `<td class="cell${v===1?' on':v===2?' tri':(m.joined&&e.date<m.joined?' pre':'')}${fx?' fix':''}${cutOld(e)?' cut':''}${we(e.id)}"${fx?` title="${fx.kind==='park'?'주차':'부재'} 등록${fx.memo?' · '+esc(fx.memo):''}"`:''}><span class="dot"></span>${fx?`<i class="fx ${fx.kind==='park'?'park':'away'}">${fx.kind==='park'?'주차':'부재'}</i>`:''}</td>`; });
     h += '</tr>';
   });
   const piN = S.members.filter(m=>expected(m,win).pi).length;
   h += `</tbody><tfoot><tr><td class="sticky c-dist"></td><td class="sticky c-score"></td><td class="sticky c-name" style="text-align:left;padding:0 10px">참석 인원</td><td class="sticky c-rank"></td><td class="sticky c-exp">${piN?`<span style="color:var(--warn)">피만두 ${piN}명</span>`:''}</td>`;
-  evs.forEach(e=>{ const n=S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length, t=S.members.filter(m=>S.att[m.id+'|'+e.id]===2).length; h+=`<td class="${we(e.id).trim()}">${n}명${t?` <span class="tri-n">△${t}</span>`:''}</td>`; });
+  evs.forEach(e=>{ const n=S.members.filter(m=>S.att[m.id+'|'+e.id]===1).length, t=S.members.filter(m=>S.att[m.id+'|'+e.id]===2).length; h+=`<td class="${(we(e.id)+(cutOld(e)?' cut':'')).trim()}">${n}명${t?` <span class="tri-n">△${t}</span>`:''}</td>`; });
   h += '</tr></tfoot>';
   $('grid').innerHTML = h;
   const total = S.members.reduce((a,m)=>a+score(m.id),0);
@@ -1104,6 +1111,20 @@ function dayRel(ds){
   const n = Math.round((new Date(ds+'T00:00:00') - new Date(isoDay(new Date())+'T00:00:00'))/864e5);
   return n<=0 ? '오늘' : n===1 ? '내일' : n===2 ? '모레' : `${n}일 후`;
 }
+// 카드 던전 표시: 기간 안의 던전 날짜를 같이 (전체면 그 기간의 던전을 다 펼침)
+function abTags(a){
+  const types = a.types && a.types.length ? a.types : ['all'];
+  const list = (types.includes('all') ? TYPES.map(t=>t.id) : types.filter(t=>WEEKLY[t]))
+    .flatMap(t=>dgDates(t, a.from, a.to).map(d=>({t, d}))).sort((x,y)=>x.d.localeCompare(y.d) || typeIdx(x.t)-typeIdx(y.t));
+  const chip = (st, txt) => `<span class="chip" style="${st}">${txt}</span>`;
+  let h = '';
+  if(types.includes('all')) h += chip('background:var(--warn-soft);color:var(--warn)', '전체');
+  h += list.length > 8 ? chip('background:var(--surface-2);color:var(--muted)', `던전 ${list.length}회`)
+                       : list.map(x=>chip(dgStyle(x.t), `${TYPES[typeIdx(x.t)].ab} ${md(x.d)}`)).join('');
+  if(types.includes('ss')) h += chip(dgStyle('ss'), '산신마루');
+  if(!types.includes('all') && !list.length && !types.includes('ss')) h += chip('background:var(--surface-2);color:var(--muted)', '이 기간엔 해당 던전 없음');
+  return h;
+}
 function renderAbs(){
   if(!AB.started) return;
   const me = meGet(), today = isoDay(new Date());
@@ -1115,13 +1136,36 @@ function renderAbs(){
   const rankOf = n => (S.members.find(m=>m.name===n)||{}).rank || '';
   $('abList').innerHTML = Object.keys(groups).sort().map(k=>`<div class="ab-day"><h3>${ymd(k)} <span class="rel">${dayRel(k)}</span> ${(n=>n?`<span class="cnt">부재 ${n}</span>`:'')(groups[k].filter(a=>abKind(a)==='away').length)}${(n=>n?`<span class="cnt park">주차 ${n}</span>`:'')(groups[k].filter(a=>abKind(a)==='park').length)}</h3>
     <div class="ab-list">${groups[k].sort((x,y)=>x.name.localeCompare(y.name,'ko')).map(a=>{
-      const mine = a.owner===AB.uid, tags = (a.types||['all']).map(t=>{ const x = AB_TYPES.find(y=>y.id===t); return x ? `<span class="chip" style="${t==='all'?'background:var(--warn-soft);color:var(--warn)':dgStyle(t)}">${x.ab}</span>` : ''; }).join('');
+      const mine = a.owner===AB.uid, tags = abTags(a);
       return `<div class="panel ab${a.name===me?' me':''}"><div class="ab-h"><span class="kind ${abKind(a)}">${AB_KIND[abKind(a)].ic} ${AB_KIND[abKind(a)].name}</span><b>${esc(a.name)}</b>${rankOf(a.name)?rankChip(rankOf(a.name)):''}${mine?`<button class="del" data-abdel="${a.id}">삭제</button>`:''}</div>
         <div class="ab-when">${a.from===a.to ? ymd(a.from) : `${ymd(a.from)} ~ ${ymd(a.to)}`} ${AB_KIND[abKind(a)].verb}</div>
         <div class="ab-tags">${tags}</div>${a.memo?`<div class="ab-memo">💬 ${esc(a.memo)}</div>`:''}</div>`; }).join('')}</div></div>`).join('');
 }
+// 문파 던전 요일 (1=월 … 7=일) · 요신·결계 화, 신기 금, 미혹 토 (출석체크 파일과 같음)
+const WEEKLY = {yo:2, gy:2, si:5, mi:6};
+const md = ds => { const d = new Date(ds+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}(${KDAY[d.getDay()]})`; };
+function dgDates(type, from, to){   // from~to 안에서 그 던전이 있는 날짜들
+  const w = WEEKLY[type]; if(!w || !from) return [];
+  const out = [], d = new Date(from+'T00:00:00'), end = to||from;
+  for(let i=0; i<62 && isoDay(d) <= end; i++, d.setDate(d.getDate()+1)) if(((d.getDay()+6)%7)+1 === w) out.push(isoDay(d));
+  return out;
+}
+function weekOf(type, ds){   // 그 주(월~일)에 그 던전이 있는 날짜
+  const d = new Date(ds+'T00:00:00'); d.setDate(d.getDate() - ((d.getDay()+6)%7) + WEEKLY[type] - 1); return isoDay(d);
+}
 function abTypesRender(){
-  $('abTypes').innerHTML = AB_TYPES.map(t=>`<button data-v="${t.id}" class="${AB.types.includes(t.id)?'on':''}">${t.ab}</button>`).join('');
+  const from = $('abFrom').value, to = $('abTo').value || from;
+  const inRange = TYPES.filter(t=>dgDates(t.id, from, to).length);
+  $('abTypes').innerHTML = AB_TYPES.map(t=>{
+    let sub = '', out = false, tip = '';
+    if(t.id==='all') sub = inRange.length ? inRange.map(x=>x.ab).join('·') : '이날 던전 없음';
+    else if(WEEKLY[t.id] && from){
+      const ds = dgDates(t.id, from, to);
+      if(ds.length){ sub = md(ds[0]) + (ds.length>1 ? ` 외 ${ds.length-1}회` : ''); tip = ds.map(md).join(', '); }
+      else { sub = md(weekOf(t.id, from)); out = true; tip = '고른 날짜에는 이 던전이 없어요'; }
+    }
+    return `<button data-v="${t.id}" class="${AB.types.includes(t.id)?'on':''}${out?' out':''}"${tip?` title="${tip}"`:''}>${t.ab}${sub?`<small>${sub}</small>`:''}</button>`;
+  }).join('');
 }
 $('abTypes').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return; const v = b.dataset.v;
@@ -1137,7 +1181,8 @@ $('btnNewAb').addEventListener('click', ()=>{
   $('abForm').hidden = false; $('btnNewAb').hidden = true;
 });
 $('abKind').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; AB.kind = b.dataset.v; $('abKind').querySelectorAll('button').forEach(x=>x.classList.toggle('on', x===b)); });
-$('abFrom').addEventListener('change', ()=>{ if(!$('abTo').value || $('abTo').value < $('abFrom').value) $('abTo').value = $('abFrom').value; $('abTo').min = $('abFrom').value; });
+$('abFrom').addEventListener('change', ()=>{ if(!$('abTo').value || $('abTo').value < $('abFrom').value) $('abTo').value = $('abFrom').value; $('abTo').min = $('abFrom').value; abTypesRender(); });
+$('abTo').addEventListener('change', abTypesRender);
 $('abCancel').onclick = ()=>{ $('abForm').hidden = true; $('btnNewAb').hidden = false; };
 $('abCreate').addEventListener('click', async ()=>{
   const me = needMe(); if(!me) return;
@@ -1147,6 +1192,7 @@ $('abCreate').addEventListener('click', async ()=>{
   if(to < from) return toast('끝 날짜가 시작 날짜보다 빨라요');
   if(to < today) return toast('이미 지난 날짜예요');
   if((new Date(to) - new Date(from))/864e5 > 30) return toast('한 번에 31일까지만 등록할 수 있어요');
+  if(!AB.types.includes('all') && !AB.types.includes('ss') && !AB.types.some(t=>dgDates(t, from, to).length)) return toast('고른 날짜에는 그 던전이 없어요 · 날짜나 던전을 다시 골라 주세요');
   const until = new Date(to+'T00:00:00'); until.setDate(until.getDate()+1);   // 끝 날짜 다음 날 0시에 사라짐
   const b = $('abCreate'); b.disabled = true;
   try{
