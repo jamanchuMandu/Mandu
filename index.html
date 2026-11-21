@@ -301,6 +301,12 @@ table.mt select{padding:4px 8px;width:100%}
   .c-rank,.c-exp{position:static!important}
   .c-name{width:110px;min-width:110px}
   table.g th,table.g td{height:30px}
+  /* 모바일 출석부: 닉네임 + 주차 칸만 */
+  table.g .c-dist,table.g .c-score,table.g .c-rank,table.g .c-exp{display:none}
+  table.g .c-name{left:0;width:96px;min-width:96px;max-width:96px;border-right:2px solid var(--line)!important}
+  td.c-name .nm span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  td.c-name .jd{display:none}
+
   .fab{gap:8px}
   .fab a{width:44px;height:44px}
   .fab a .ic-wrap img{width:44px;height:44px}
@@ -496,6 +502,12 @@ button.seat.me:hover{filter:brightness(1.05)}
   .c-name{width:110px;min-width:110px}
   .c-rank,.c-exp{position:static!important}
   .grid-wrap{max-height:none}
+  /* 모바일 출석부: 닉네임 + 주차 칸만 */
+  table.g .c-dist,table.g .c-score,table.g .c-rank,table.g .c-exp{display:none}
+  table.g .c-name{left:0;width:96px;min-width:96px;max-width:96px;border-right:2px solid var(--line)!important}
+  td.c-name .nm span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  td.c-name .jd{display:none}
+
   .bar-row{grid-template-columns:72px minmax(0,1fr) 84px}
   .rg{grid-template-columns:minmax(0,1fr)}
 }
