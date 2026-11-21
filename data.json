@@ -1,5 +1,5 @@
 {
- "budget": 54,
+ "budget": 25,
  "minOne": false,
  "events": [
   {
@@ -1142,5 +1142,6 @@
    "memo": ""
   }
  },
- "scoreFrom": "2026-11-18"
+ "scoreFrom": "2026-11-18",
+ "tokenKeep": 6670
 }
