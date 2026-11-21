@@ -497,6 +497,9 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
 .notice-card .ic{font-size:20px;line-height:1.4}
 .notice-card h2{margin:0 0 4px;font-size:15px}
 .notice-card > div{flex:1;min-width:0}
+.rc-red{color:#d93025;font-weight:700}.rc-blue{color:#1a73e8;font-weight:700}.rc-green{color:#188038;font-weight:700}.rc-orange{color:#e8710a;font-weight:700}.rc-purple{color:#8e44ad;font-weight:700}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .rc-red{color:#ff8a80} :root:not([data-theme="light"]) .rc-blue{color:#8ab4f8} :root:not([data-theme="light"]) .rc-green{color:#81c995} :root:not([data-theme="light"]) .rc-orange{color:#fdb36b} :root:not([data-theme="light"]) .rc-purple{color:#d7aefb} }
+:root[data-theme="dark"] .rc-red{color:#ff8a80} :root[data-theme="dark"] .rc-blue{color:#8ab4f8} :root[data-theme="dark"] .rc-green{color:#81c995} :root[data-theme="dark"] .rc-orange{color:#fdb36b} :root[data-theme="dark"] .rc-purple{color:#d7aefb}
 .notice-card .body{font-size:15px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
 .rd-list{display:flex;flex-direction:column;gap:10px}
 .rd{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:start}
@@ -619,6 +622,14 @@ const rkClass = r => { const i=RANKS.indexOf(r); return i<0?'plain':'rk'+i; };
 const rankChip = r => r ? `<span class="chip ${rkClass(r)}">${esc(r)}</span>` : '<span class="hint">—</span>';
 const guildName = () => S.guild || GUILD_NAME;
 const notice = () => S.notice || NOTICE;
+/* 공지 꾸미기: **굵게**, [빨강]글씨[/빨강] (빨강·파랑·초록·주황·보라) */
+const RICH_C = {'빨강':'red','파랑':'blue','초록':'green','주황':'orange','보라':'purple'};
+function fmtRich(t){
+  let h = esc(String(t||''));
+  h = h.replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>');
+  for(let k=0;k<3;k++) h = h.replace(/\[(빨강|파랑|초록|주황|보라)\]([\s\S]*?)\[\/\1\]/g, (m,c,x)=>`<span class="rc-${RICH_C[c]}">${x}</span>`);
+  return h;
+}
 
 /* ---------- 계산 (로컬 출석체크 파일과 같은 규칙) ---------- */
 /* 숨긴 주차(보상 분배가 끝난 주)는 표와 점수에서 빠짐. 피만두 예상(missWindow)은 S.events 전체를 봄 */
@@ -719,7 +730,7 @@ function renderHome(){
   const L = channelLinks();
   if(notice() || L.length){
     h += `<div class="top-row${notice()&&L.length?'':' single'}">`;
-    if(notice()) h += `<div class="panel notice-card"><span class="ic" aria-hidden="true">📢</span><div><h2>공지사항</h2><div class="body">${esc(notice())}</div></div></div>`;
+    if(notice()) h += `<div class="panel notice-card"><span class="ic" aria-hidden="true">📢</span><div><h2>공지사항</h2><div class="body">${fmtRich(notice())}</div></div></div>`;
     if(L.length) h += `<div class="panel links-card"><h2>문파 채널</h2>${L.map(x=>`<a class="ch-btn ch-${x.id}" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${x.icon}<span>${x.name}</span><span class="go">바로가기 ↗</span></a>`).join('')}</div>`;
     h += '</div>';
   }
@@ -1265,7 +1276,7 @@ function showPopup(){
   const key = 'guild-popup-hide', today = isoDay(new Date());
   try{ const h = JSON.parse(localStorage.getItem(key)||'null'); if(h && h.ver===p.ver && h.day===today) return; }catch(e){}
   $('popTitle').textContent = p.title || '공지';
-  $('popBody').textContent = p.body || '';
+  $('popBody').innerHTML = fmtRich(p.body || '');
   $('popup').hidden = false; $('popClose').focus();
   const close = ()=>{ $('popup').hidden = true; };
   $('popClose').onclick = close; $('popX').onclick = close;
