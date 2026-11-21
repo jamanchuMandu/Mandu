@@ -552,6 +552,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
     <div class="panel bus-form" id="busForm" hidden>
       <div class="bf-row"><span class="bf-l">종류</span>
         <div class="seg" id="bfMode"><button data-v="drive" class="on">🚌 내가 기사</button><button data-v="need">🙋 기사 구해요</button></div></div>
+      <div class="bf-row" id="bfStageRow" hidden><span class="bf-l">단계</span><select id="bfStage" aria-label="단계"></select></div>
       <div class="bf-row"><span class="bf-l">출발</span><input type="date" id="bfDate"><input type="time" id="bfTime" step="300"></div>
       <div class="bf-row"><span class="bf-l">인원</span><span class="hint" style="font-size:13px">총 4명 · 기사가 2명 이상이어도 돼요</span></div>
       <div class="bf-row" id="bfCpRow" hidden><span class="bf-l">내 전투력</span><input type="text" id="bfCp" inputmode="numeric" maxlength="12" placeholder="예) 523000"></div>
@@ -883,7 +884,7 @@ function renderBusGuide(){
 function renderAll(){
   $('brand').innerHTML = `${esc(guildName())}<span>출석부</span>`;
   document.title = `${guildName()} 출석부`;
-  renderHome(); renderAttendance(); renderDist(); renderHist(); renderFab(); renderBusGuide();
+  renderHome(); renderAttendance(); renderDist(); renderHist(); renderFab(); busLabels(); renderBusGuide();
 }
 
 /* ---------- 라우팅 ---------- */
@@ -941,7 +942,15 @@ const FIREBASE_CONFIG = {
   appId: "1:119494543447:web:a22862f8fc4dbff3f2fb12"
 };
 const FB_VER = '10.12.2';
-const BUS_DUNGEON = {id:'ss', name:'산신마루'};   // 버스 던전은 하나
+const BUS_DUNGEON = {id:'ss', name:'산신마루'};   // 버스 던전은 하나 (이름·단계는 출석체크 파일에서 바꿈 → S.bus)
+const busName = () => (S && S.bus && S.bus.name) || BUS_DUNGEON.name;
+const busStages = () => { const b = (S && S.bus) || {}; if(b.min==null || b.max==null) return []; const out = []; for(let i=+b.min; i<=+b.max && out.length<=50; i++) out.push(i); return out; };
+function busLabels(){
+  $('btnNewBus').textContent = `＋ ${busName()} 버스 만들기`;
+  const st = busStages(), sel = $('bfStage'); $('bfStageRow').hidden = !st.length;
+  if(st.length){ let last = ''; try{ last = localStorage.getItem('guild-bus-stage')||''; }catch(e){}
+    sel.innerHTML = st.map(n=>`<option value="${n}"${String(n)===last?' selected':''}>${n}단계</option>`).join(''); }
+}
 const BUS_KEEP_MS = 15*60e3;   // 출발 15분 뒤 삭제
 const BUS_CAP = 4;   // 총 4명 (기사·승객 합쳐서, 기사는 여러 명 가능)
 let BUS = {started:false, db:null, uid:null, list:[], unsub:null, mode:'drive'};
@@ -1010,7 +1019,7 @@ function dgStyle(id){ return ['yo','gy','mi','si'].includes(id) ? `background:va
 function renderBuses(){
   const me = meGet(), lim = Date.now() - BUS_KEEP_MS;
   const list = BUS.list.filter(b=>b.time && b.time.toDate() >= new Date(lim));
-  if(!list.length){ $('busList').innerHTML = `<div class="panel card bus-empty"><div class="empty">아직 운행 중인 버스가 없어요. <b>＋ 산신마루 버스 만들기</b>로 첫 버스를 띄워 보세요!</div></div>`; return; }
+  if(!list.length){ $('busList').innerHTML = `<div class="panel card bus-empty"><div class="empty">아직 운행 중인 버스가 없어요. <b>＋ ${esc(busName())} 버스 만들기</b>로 첫 버스를 띄워 보세요!</div></div>`; return; }
   $('busList').innerHTML = list.map(b=>{
     const d = b.time.toDate(), {drivers, riders, cap} = busNorm(b), cnt = drivers.length + riders.length, full = cnt >= cap;
     const on = me && (drivers.includes(me) || riders.includes(me));
@@ -1121,7 +1130,9 @@ $('bfCancel').onclick = ()=>{ $('busForm').hidden = true; $('btnNewBus').hidden 
 $('bfCreate').addEventListener('click', async ()=>{
   const me = needMe(); if(!me) return;
   if(!BUS.db || !BUS.uid) return toast('아직 연결 중이에요. 잠시 후 다시 눌러 주세요');
-  const title = BUS_DUNGEON.name;
+  const st = busStages().length ? $('bfStage').value : '';
+  if(st){ try{ localStorage.setItem('guild-bus-stage', st); }catch(e){} }
+  const title = (busName() + (st ? ` ${st}단계` : '')).slice(0,30);
   if(!$('bfDate').value || !$('bfTime').value) return toast('출발 날짜와 시간을 골라 주세요');
   const time = new Date(`${$('bfDate').value}T${$('bfTime').value}:00`);
   let cpNew = 0;
@@ -1141,7 +1152,7 @@ $('bfCreate').addEventListener('click', async ()=>{
 setInterval(()=>{ if(!$('v-bus').hidden && BUS.list.length){ renderBuses(); cleanupBuses(); } }, 10000);   // 남은 시간 갱신 + 빈 버스 정리
 
 /* ---------- 부재 표시: "이날 참석 못 해요" 카드 (Firebase absences 컬렉션) ---------- */
-const AB_TYPES = [{id:'all', ab:'전체'}, ...TYPES.map(t=>({id:t.id, ab:t.ab})), {id:'ss', ab:'산신마루'}];
+const AB_TYPES = [{id:'all', ab:'전체'}, ...TYPES.map(t=>({id:t.id, ab:t.ab})), {id:'ss', get ab(){ return busName(); }}];
 let AB = {started:false, db:null, uid:null, list:[], types:['all'], kind:'away'};
 const AB_KIND = {away:{ic:'🙅', name:'부재', verb:'불참'}, park:{ic:'🅿️', name:'주차', verb:'주차'}};
 const abKind = a => a.kind==='park' ? 'park' : 'away';
@@ -1182,7 +1193,7 @@ function abTags(a){
   if(types.includes('all')) h += chip('background:var(--warn-soft);color:var(--warn)', '전체');
   h += list.length > 8 ? chip('background:var(--surface-2);color:var(--muted)', `던전 ${list.length}회`)
                        : list.map(x=>chip(dgStyle(x.t), `${TYPES[typeIdx(x.t)].ab} ${md(x.d)}`)).join('');
-  if(types.includes('ss')) h += chip(dgStyle('ss'), '산신마루');
+  if(types.includes('ss')) h += chip(dgStyle('ss'), esc(busName()));
   if(!types.includes('all') && !list.length && !types.includes('ss')) h += chip('background:var(--surface-2);color:var(--muted)', '이 기간엔 해당 던전 없음');
   return h;
 }
