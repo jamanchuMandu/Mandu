@@ -312,6 +312,25 @@ table.mt select{padding:4px 8px;width:100%}
 .stat.tok{background:var(--t-si)}
 .stat.tok span{color:var(--t-si-fg)}
 .stat.tok b{color:var(--t-si-fg)}
+.stat.cutd{background:var(--t-yo)}
+.stat.cutd span,.stat.cutd b{color:var(--t-yo-fg)}
+/* 분배 이력 */
+.hist{margin:0}
+.hist>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.hist>summary::-webkit-details-marker{display:none}
+.hist>summary h3{margin:0;font-size:16px}
+.hist>summary .per{font-size:13px;color:var(--muted)}
+.hist>summary .tags{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.hist>summary .tags span{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--surface-2);white-space:nowrap}
+.hist>summary .tags .t1{background:var(--accent-soft);color:var(--accent)}
+.hist>summary .tags .t2{background:var(--t-si);color:var(--t-si-fg)}
+.hist>summary .tags .t3{background:var(--t-gy);color:var(--t-gy-fg)}
+.hist>summary::after{content:'펼치기 ▾';font-size:12px;font-weight:600;color:var(--muted)}
+.hist[open]>summary::after{content:'접기 ▴'}
+.hist .memo{padding:0 16px 10px;font-size:13px;color:var(--muted)}
+.hist .dl{border-top:1px solid var(--line);border-radius:0}
+.hist-list{display:flex;flex-direction:column;gap:12px}
+.dl-row.me{box-shadow:inset 3px 0 0 var(--accent)}
 .stat.keep{background:var(--t-gy)}
 .stat.keep span,.stat.keep b{color:var(--t-gy-fg)}
 .rate{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 14px;border-radius:10px;background:var(--surface-2);font-size:13px}
@@ -492,7 +511,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
     <a href="#home" data-v="home">홈</a>
     <a href="#attendance" data-v="attendance">출석부</a>
     <a href="#distribution" data-v="distribution">분배표</a>
-    <a href="#shop" data-v="shop">문파상점</a>
+    <a href="#history" data-v="history">분배이력</a>
     <a href="#bus" data-v="bus">🚌 버스</a>
     <a href="#away" data-v="away">🙅 부재&amp;주차</a>
   </div>
@@ -505,6 +524,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
       <div class="stat budget"><span>가호 주머니 구매가능 갯수</span><b id="sBudget">0</b></div>
       <div class="stat"><span>인원</span><b id="sMembers">0</b></div>
       <div class="stat"><span>총 참석점수</span><b id="sTotal">0</b></div>
+      <div class="stat cutd" id="sCutWrap" title="이 날짜(포함)부터의 출석만 참석점수·분배에 계산됩니다 · 이전 일정은 흐리게 표시"><span>점수 집계 시작일</span><b id="sCut">-</b></div>
       <div class="tb-right">
         <select id="sort" aria-label="정렬">
           <option value="orig">원래 순서</option><option value="score">참석점수 높은 순</option>
@@ -518,7 +538,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
     <p class="hint" style="margin:0">O 참석(1점) · △ 부분참여(0점) · X 불참 · – 가입 전 · <b>부재/주차</b> 표시 = 미리 등록한 △ · 예상등급: 최근 4주 던전 불참 4회 이상이면 피만두 (신규 문파원은 가입일 이후만)</p>
   </section>
   <section class="view" id="v-distribution" hidden></section>
-  <section class="view" id="v-shop" hidden></section>
+  <section class="view" id="v-history" hidden></section>
   <section class="view" id="v-bus" hidden>
     <div class="panel toolbar bus-top">
       <div class="me-box"><span class="hint">나</span><b id="meName">닉네임 선택</b><select id="meSel" aria-label="내 닉네임"></select></div>
@@ -769,6 +789,7 @@ function renderAttendance(){
   $('grid').innerHTML = h;
   const total = S.members.reduce((a,m)=>a+score(m.id),0);
   $('sMembers').textContent = S.members.length; $('sTotal').textContent = total; $('sBudget').textContent = Math.floor(+S.budget||0);
+  $('sCut').textContent = S.scoreFrom ? fmtDate(S.scoreFrom) : '처음부터';
 }
 
 /* ---------- 분배표 ---------- */
@@ -795,7 +816,31 @@ function renderDist(){
   $('dSearch').addEventListener('input', ()=>{ renderDist(); const n=$('dSearch'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); });
 }
 
-/* ---------- 문파상점 ---------- */
+/* ---------- 분배 이력 (출석체크 파일 📜 분배 이력에서 관리) ---------- */
+function renderHist(){
+  const list = (S.distHist||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const pouch = `<img class="pi" src="shop/gaho_pouch.png" alt="" onerror="this.remove()">`;
+  const me = (()=>{ try{ return meGet(); }catch(e){ return ''; } })();
+  if(!list.length){ $('v-history').innerHTML = `<div class="panel card"><div class="empty">아직 분배 이력이 없어요.</div></div>`; return; }
+  const rankOf = n => (S.members.find(m=>m.name===n)||{}).rank || '';
+  let h = `<div class="panel toolbar"><div class="stat"><span>분배 횟수</span><b>${list.length}<small>회</small></b></div>
+    <div class="stat budget"><span>지금까지 가호 주머니</span><b>${list.reduce((a,r)=>a+r.rows.reduce((x,y)=>x+(+y.n||0),0),0)}<small>개</small></b></div>
+    <div class="rate">${pouch}<span>가호 주머니 <b>1개</b></span><span class="eq">=</span><span>용맹의 증표 <b>${TOKEN_RATE}</b></span></div></div><div class="hist-list">`;
+  list.forEach((r,k)=>{
+    const rows = r.rows.slice().sort((a,b)=>(+b.n||0)-(+a.n||0) || (+b.score||0)-(+a.score||0)), sum = rows.reduce((a,x)=>a+(+x.n||0),0), max = Math.max(1,...rows.map(x=>+x.n||0));
+    h += `<details class="panel hist"${k===0?' open':''}><summary><h3>${r.date?fmtDate(r.date):''} 분배</h3>
+      ${r.from&&r.to?`<span class="per">${fmtDate(r.from)} ~ ${fmtDate(r.to)}${r.evN?` · 던전 ${r.evN}회`:''}</span>`:''}
+      <span class="tags"><span class="t1">가호 주머니 ${sum}개</span><span class="t2">용맹의 증표 ${fmtN(sum*TOKEN_RATE)}</span>${+r.keep?`<span class="t3">KEEP ${fmtN(+r.keep)}</span>`:''}<span>${rows.filter(x=>+x.n>0).length}명</span></span></summary>
+      ${r.memo?`<div class="memo">💬 ${esc(r.memo)}</div>`:''}
+      <div class="dl"><div class="dl-row dl-head"><span class="rk">#</span><span class="who">닉네임</span><span class="info"><span class="sc">참석점수</span><span class="bar"></span></span><span class="cnt">가호 주머니</span><span class="cv">용맹의 증표</span></div>
+      ${rows.map((x,i)=>`<div class="dl-row${+x.n?'':' zero'}${x.name===me?' me':''}"><span class="rk">${i+1}</span><span class="who"><b>${esc(x.name)}</b>${rankOf(x.name)?rankChip(rankOf(x.name)):''}</span>
+        <span class="info"><span class="sc"><i>참석 </i>${+x.score||0}<i>점</i></span><span class="bar"><span class="mini" style="width:${(+x.n||0)/max*100}%"></span></span></span>
+        <span class="cnt">${pouch}${+x.n||0}<i>개</i></span><span class="cv"><em>용맹의 증표</em>${fmtN((+x.n||0)*TOKEN_RATE)}</span></div>`).join('')}</div></details>`;
+  });
+  $('v-history').innerHTML = h + '</div>';
+}
+
+/* ---------- 문파상점 (더 이상 탭에 안 보임 · 코드만 남김) ---------- */
 function renderShop(){
   const items = (S.shop||[]).filter(it=>it && it.name);
   let h = `<div class="panel toolbar"><div class="stat budget"><span>가호 주머니 구매가능 갯수</span><b>${Math.floor(+S.budget||0)}<small>개</small></b></div>
@@ -826,11 +871,11 @@ function renderBusGuide(){
 function renderAll(){
   $('brand').innerHTML = `${esc(guildName())}<span>출석부</span>`;
   document.title = `${guildName()} 출석부`;
-  renderHome(); renderAttendance(); renderDist(); renderShop(); renderFab(); renderBusGuide();
+  renderHome(); renderAttendance(); renderDist(); renderHist(); renderFab(); renderBusGuide();
 }
 
 /* ---------- 라우팅 ---------- */
-const VIEWS = ['home','attendance','distribution','shop','bus','away'];
+const VIEWS = ['home','attendance','distribution','history','bus','away'];
 function route(){
   const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
   VIEWS.forEach(x=>$('v-'+x).hidden = x!==v);
