@@ -331,6 +331,17 @@ table.mt select{padding:4px 8px;width:100%}
 .hist .dl{border-top:1px solid var(--line);border-radius:0}
 .hist-list{display:flex;flex-direction:column;gap:12px}
 .dl-row.me{box-shadow:inset 3px 0 0 var(--accent)}
+.dl-row.thx{background:var(--t-si)!important}
+.dl-row .crown{margin-right:4px}
+.thx-strip{margin:0 16px 12px;padding:12px;border-radius:14px;background:linear-gradient(135deg,var(--t-mi),var(--t-si))}
+.thx-h{font-weight:800;font-size:14px;margin-bottom:8px;color:var(--fg)}
+.thx-h span{font-weight:500;font-size:12px;color:var(--muted);margin-left:6px}
+.thx-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.thx-p{flex:none;width:84px;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center}
+.thx-p img,.thx-p .ini{width:72px;height:72px;border-radius:16px;object-fit:cover;object-position:center top;border:2px solid #e0b100;background:var(--surface)}
+.thx-p .ini{display:grid;place-items:center;font-size:26px;font-weight:800;color:var(--muted)}
+.thx-p b{font-size:12px;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thx-p b i{font-style:normal;margin-right:2px}
 .hmemo{font-size:12px;font-weight:600;color:var(--warn);background:var(--warn-soft);padding:1px 8px;border-radius:99px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .stat.keep{background:var(--t-gy)}
 .stat.keep span,.stat.keep b{color:var(--t-gy-fg)}
@@ -568,6 +579,7 @@ footer{padding-block:0 30px;color:var(--muted);font-size:12px;text-align:center}
       <div class="me-box"><span class="hint">나</span><b class="meName">닉네임 선택</b><select class="meSel" id="meSel2" aria-label="내 닉네임"></select></div>
       <div class="tb-right"><button class="primary" id="btnNewAb">＋ 부재·주차 등록</button></div>
     </div>
+    <details class="panel bus-guide" id="awayGuide" hidden></details>
     <div class="panel bus-form ab-form" id="abForm" hidden>
       <div class="bf-row"><span class="bf-l">종류</span><div class="seg" id="abKind"><button data-v="away" class="on">🙅 부재</button><button data-v="park">🅿️ 주차</button></div></div>
       <div class="bf-row"><span class="bf-l">날짜</span><input type="date" id="abFrom"><span class="hint">~</span><input type="date" id="abTo"><span class="hint" style="font-size:12px">하루면 같은 날짜</span></div>
@@ -840,13 +852,16 @@ function renderHist(){
     <div class="stat budget"><span>지금까지 가호 주머니</span><b>${list.reduce((a,r)=>a+r.rows.reduce((x,y)=>x+(+y.n||0),0),0)}<small>개</small></b></div>
     <div class="rate">${pouch}<span>가호 주머니 <b>1개</b></span><span class="eq">=</span><span>용맹의 증표 <b>${TOKEN_RATE}</b></span></div></div><div class="hist-list">`;
   list.forEach((r,k)=>{
-    const rows = r.rows.slice().sort((a,b)=>(+b.n||0)-(+a.n||0) || (+b.score||0)-(+a.score||0)), sum = rows.reduce((a,x)=>a+(+x.n||0),0), max = Math.max(1,...rows.map(x=>+x.n||0));
+    // 고마운 분(보상 안 받음)이 맨 위, 그다음 받은 개수 순
+    const rows = r.rows.slice().sort((a,b)=>(b.thx?1:0)-(a.thx?1:0) || (+b.n||0)-(+a.n||0) || (+b.score||0)-(+a.score||0)), sum = rows.reduce((a,x)=>a+(+x.n||0),0), max = Math.max(1,...rows.map(x=>+x.n||0));
     h += `<details class="panel hist"${k===0?' open':''}><summary><h3>${r.date?fmtDate(r.date):''} 분배</h3>
       ${r.from&&r.to?`<span class="per">${fmtDate(r.from)} ~ ${fmtDate(r.to)}${r.evN?` · 던전 ${r.evN}회`:''}</span>`:''}
-      <span class="tags"><span class="t1">가호 주머니 ${sum}개</span><span class="t2">용맹의 증표 ${fmtN(sum*TOKEN_RATE)}</span>${+r.keep?`<span class="t3">KEEP ${fmtN(+r.keep)}</span>`:''}<span>${rows.filter(x=>+x.n>0).length}명</span></span></summary>
+      <span class="tags"><span class="t1">가호 주머니 ${sum}개</span><span class="t2">용맹의 증표 ${fmtN(sum*TOKEN_RATE)}</span>${+r.keep?`<span class="t3">KEEP ${fmtN(+r.keep)}</span>`:''}<span>${rows.filter(x=>+x.n>0).length}명</span>${rows.some(x=>x.thx)?`<span class="t3">👑 ${rows.filter(x=>x.thx).length}명</span>`:''}</span></summary>
       ${r.memo?`<div class="memo">💬 ${esc(r.memo)}</div>`:''}
+      ${(t=>t.length?`<div class="thx-strip"><div class="thx-h">🙏 고마운 분들 <span>보상을 양보해 주셨어요</span></div><div class="thx-row">${t.map(x=>{ const ph = (S.photos||{})[x.name];
+        return `<div class="thx-p">${ph?`<img src="${esc(ph)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ini',textContent:'${esc(x.name).slice(0,1)}'}))">`:`<span class="ini">${esc(x.name.slice(0,1))}</span>`}<b><i>👑</i>${esc(x.name)}</b></div>`; }).join('')}</div></div>`:'')(rows.filter(x=>x.thx))}
       <div class="dl"><div class="dl-row dl-head"><span class="rk">#</span><span class="who">닉네임</span><span class="info"><span class="sc">참석점수</span><span class="bar"></span></span><span class="cnt">가호 주머니</span><span class="cv">용맹의 증표</span></div>
-      ${rows.map((x,i)=>`<div class="dl-row${+x.n?'':' zero'}${x.name===me?' me':''}"><span class="rk">${i+1}</span><span class="who"><b>${esc(x.name)}</b>${rankOf(x.name)?rankChip(rankOf(x.name)):''}${x.memo?`<span class="hmemo">💬 ${esc(x.memo)}</span>`:''}</span>
+      ${rows.map((x,i)=>`<div class="dl-row${+x.n||x.thx?'':' zero'}${x.thx?' thx':''}${x.name===me?' me':''}"><span class="rk">${i+1}</span><span class="who"><b>${x.thx?'<span class="crown" title="고마운 분">👑</span>':''}${esc(x.name)}</b>${rankOf(x.name)?rankChip(rankOf(x.name)):''}${x.memo?`<span class="hmemo">💬 ${esc(x.memo)}</span>`:''}</span>
         <span class="info"><span class="sc"><i>참석 </i>${+x.score||0}<i>점</i></span><span class="bar"><span class="mini" style="width:${(+x.n||0)/max*100}%"></span></span></span>
         <span class="cnt">${pouch}${+x.n||0}<i>개</i></span><span class="cv"><em>용맹의 증표</em>${fmtN((+x.n||0)*TOKEN_RATE)}</span></div>`).join('')}</div></details>`;
   });
@@ -871,15 +886,16 @@ function renderShop(){
   $('v-shop').innerHTML = h;
 }
 /* ---------- 버스 이용 방법 카드 (출석체크 파일 ⓘ 공지 설정에서 수정) ---------- */
-function renderBusGuide(){
-  const el = $('busGuide'), steps = ((S.busGuide||{}).steps||[]).filter(x=>x.img||x.text);
+function renderBusGuide(){ guideCard('busGuide', S.busGuide, '버스 이용 방법', 'guild-busguide-closed'); guideCard('awayGuide', S.awayGuide, '부재·주차 이용 방법', 'guild-awayguide-closed'); }
+function guideCard(id, g, title, lsKey){
+  const el = $(id), steps = ((g||{}).steps||[]).filter(x=>x.img||x.text);
   if(!steps.length){ el.hidden = true; return; }
-  let closed = false; try{ closed = localStorage.getItem('guild-busguide-closed')==='1'; }catch(e){}
-  el.innerHTML = `<summary>📖 버스 이용 방법 <span class="hint">${steps.length}단계</span></summary>
+  let closed = false; try{ closed = localStorage.getItem(lsKey)==='1'; }catch(e){}
+  el.innerHTML = `<summary>📖 ${title} <span class="hint">${steps.length}단계</span></summary>
     <ol class="bg-list">${steps.map((x,i)=>`<li>${x.img?`<a href="${esc(x.img)}" target="_blank" rel="noopener" title="크게 보기"><img src="${esc(x.img)}" alt="${i+1}단계" loading="lazy"></a>`:''}
       ${x.text?`<div class="bg-t"><span class="bg-n">${i+1}</span><span>${esc(x.text)}</span></div>`:`<div class="bg-t"><span class="bg-n">${i+1}</span></div>`}</li>`).join('')}</ol>`;
   el.open = !closed; el.hidden = false;
-  if(!el._t){ el._t = 1; el.addEventListener('toggle', ()=>{ try{ localStorage.setItem('guild-busguide-closed', el.open?'0':'1'); }catch(e){} }); }
+  if(!el._t){ el._t = 1; el.addEventListener('toggle', ()=>{ try{ localStorage.setItem(lsKey, el.open?'0':'1'); }catch(e){} }); }
 }
 function renderAll(){
   $('brand').innerHTML = `${esc(guildName())}<span>출석부</span>`;
