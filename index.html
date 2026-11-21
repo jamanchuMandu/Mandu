@@ -312,6 +312,8 @@ table.mt select{padding:4px 8px;width:100%}
 .stat.tok{background:var(--t-si)}
 .stat.tok span{color:var(--t-si-fg)}
 .stat.tok b{color:var(--t-si-fg)}
+.stat.keep{background:var(--t-gy)}
+.stat.keep span,.stat.keep b{color:var(--t-gy-fg)}
 .rate{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 14px;border-radius:10px;background:var(--surface-2);font-size:13px}
 .rate .pi{width:26px;height:26px;border-radius:6px}
 .rate b{font-variant-numeric:tabular-nums}
@@ -628,7 +630,8 @@ function missWindow(){
   const iso = d => new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
   const to = iso(t), from = iso(f);
   // 참석자가 한 명도 없는 일정(아직 안 열렸거나 취소)은 불참 계산에서 제외
-  const held = e => S.members.some(m=>S.att[m.id+'|'+e.id]);
+  // 부재·주차로 미리 넣은 △만 있는 일정은 아직 안 열린 것으로 봄 (오늘 저녁 던전이 미리 '열린 일정'으로 잡혀 전원 불참 처리되던 문제)
+  const held = e => S.members.some(m=>{ const k = m.id+'|'+e.id; return S.att[k] && !(S.absFix||{})[k]; });
   // 유예: COUNT_FROM 이전 던전은 판정에 넣지 않음
   const start = from < COUNT_FROM ? COUNT_FROM : from;
   const grace = to < COUNT_FROM;
@@ -777,7 +780,8 @@ function renderDist(){
   const budget = Math.floor(+S.budget||0);
   const pouch = `<img class="pi" src="shop/gaho_pouch.png" alt="" onerror="this.remove()">`;
   let h = `<div class="panel toolbar"><div class="stat budget"><span>가호 주머니 구매가능 갯수</span><b>${budget}<small>개</small></b></div>
-    <div class="stat tok"><span>용맹의 증표 현황</span><b>${fmtN(S.tokens!=null && S.tokens!=="" ? S.tokens : budget*TOKEN_RATE)}</b></div>
+    <div class="stat tok"><span>용맹의 증표 현황</span><b>${fmtN(S.tokens!=null && S.tokens!=="" ? Math.max(0, +S.tokens - (+S.tokenKeep||0)) : budget*TOKEN_RATE)}</b></div>
+    ${+S.tokenKeep ? `<div class="stat keep"><span>용맹의 증표 KEEP</span><b>${fmtN(+S.tokenKeep)}</b></div>` : ''}
     <div class="stat"><span>받는 인원</span><b>${rows.filter(r=>r.d>0).length}<small>명</small></b></div>
     <div class="rate">${pouch}<span>가호 주머니 <b>1개</b></span><span class="eq">=</span><span>용맹의 증표 <b>${TOKEN_RATE}</b></span><span class="sub">문파자금</span></div>
     <div class="tb-right"><input type="text" id="dSearch" placeholder="닉네임 검색" size="12" value="${esc(q)}"></div></div>`;
