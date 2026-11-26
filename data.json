@@ -1,5 +1,5 @@
 {
- "budget": 55,
+ "budget": 61,
  "minOne": false,
  "events": [
   {
@@ -887,7 +887,7 @@
    "lock": true
   }
  ],
- "tokens": 19500,
+ "tokens": 20770,
  "popup": {
   "on": false,
   "title": "분배 이력 페이지 추가, 기존 문파상점 삭제",
